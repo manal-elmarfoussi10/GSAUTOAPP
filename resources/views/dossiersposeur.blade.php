@@ -9,7 +9,7 @@
                 <i class="fas fa-tools"></i>
                 Mes Interventions
             </h1>
-            <p class="dossiers-subtitle">Gérez vos dossiers clients et ajoutez des commentaires/photos</p>
+            <p class="dossiers-subtitle">Gérez vos dossiers clients et ajoutez des commentaires/photo</p>
         </div>
 
         <div class="header-actions">
