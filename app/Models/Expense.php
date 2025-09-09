@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\CompanyScoped; 
 
 class Expense extends Model
 {
+    use CompanyScoped;
     protected $fillable = [
         'date',
         'client_id',
@@ -13,7 +15,8 @@ class Expense extends Model
         'paid_status',
         'ht_amount',
         'ttc_amount',
-        'description' // Add this
+        'description' ,
+        'company_id'// Add this
     ];
     
     // Add this casting
@@ -30,4 +33,5 @@ class Expense extends Model
     {
         return $this->belongsTo(Fournisseur::class);
     }
+    public function company() { return $this->belongsTo(Company::class); }
 }

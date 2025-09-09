@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-8 text-gray-800 border-b-2 border-orange-500 pb-2">Créer un nouveau bon de commande</h1>
+    <h1 class="text-3xl font-bold mb-8 text-gray-800 border-b-2 border-orange-500 pb-2">Créer un nouveau bon de livraison</h1>
     
     <form action="{{ route('bons-de-commande.store') }}" method="POST" enctype="multipart/form-data" class="bg-white p-8 rounded-lg shadow-lg" id="order-form">
         @csrf
@@ -223,7 +223,7 @@
                 <i class="fas fa-times-circle mr-2"></i> Annuler
             </a>
             <button type="submit" class="bg-orange-500 text-white px-8 py-3 rounded-lg hover:bg-orange-600 transition font-bold flex items-center">
-                <i class="fas fa-save mr-2"></i> Créer le bon de commande
+                <i class="fas fa-save mr-2"></i> Créer le bon de livraison
             </button>
         </div>
     </form>

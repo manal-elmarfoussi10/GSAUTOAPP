@@ -3,7 +3,7 @@
 @section('content')
 <div class="max-w-lg mx-auto bg-white p-6 rounded shadow mt-10">
     <h2 class="text-orange-600 font-semibold text-sm border-b mb-4 pb-2">
-        Achat d'unité pour traiter vos dossiers GG auto
+        Achat de crédits pour traiter vos dossiers GS Auto
     </h2>
 
     @if(session('success'))

@@ -25,12 +25,38 @@
             </a>
         </li>
 
+    {{-- NEW: Produits globaux --}}
+<li>
+    <a href="{{ route('superadmin.products.index') }}"
+       class="flex items-center gap-3 px-3 py-2 rounded
+              {{ request()->routeIs('superadmin.products.*') ? 'bg-[#FF4B00] text-white font-semibold' : 'hover:bg-orange-100 text-gray-700' }}">
+      <i data-lucide="package" class="w-4 h-4"></i> Produits globaux
+    </a>
+  </li>
+
+  <li>
+    <a href="{{ route('superadmin.messages.index') }}"
+       class="flex items-center gap-3 px-3 py-2 rounded {{ request()->routeIs('superadmin.messages.*') ? 'bg-[#FF4B00] text-white font-semibold' : 'hover:bg-orange-100 text-gray-700' }}">
+      <i data-lucide="inbox" class="w-4 h-4"></i>
+      Messages
+    </a>
+  </li>
+
+  
+        {{-- Fichiers & Exports --}}
+        <li>
+            <a href="{{ route('superadmin.files.index') }}"
+               class="flex items-center gap-3 px-3 py-2 rounded {{ request()->routeIs('superadmin.files.*') ? 'bg-[#FF4B00] text-white font-semibold' : 'hover:bg-orange-100 text-gray-700' }}">
+                <i data-lucide="database" class="w-4 h-4"></i> Fichiers & Exports
+            </a>
+        </li>
+
         <li>
             <a href="{{ route('superadmin.global-users.index') }}"
                class="flex items-center gap-3 px-3 py-2 rounded {{ request()->routeIs('superadmin.global-users.*') ? 'bg-[#FF4B00] text-white font-semibold' : 'hover:bg-orange-100 text-gray-700' }}">
               <i data-lucide="users" class="w-4 h-4"></i> Utilisateurs globaux
             </a>
-          </li>
+        </li>
     </ul>
 
     <ul class="space-y-1 px-2 py-2 border-t border-gray-200">

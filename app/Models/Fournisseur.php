@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\CompanyScoped; 
 
 class Fournisseur extends Model
 {
+    use CompanyScoped;
     protected $fillable = [
         'nom_societe',
         'email',
@@ -20,7 +22,8 @@ class Fournisseur extends Model
         'adresse_devis',
         'contact_nom',
         'contact_email',
-        'contact_telephone'
+        'contact_telephone',
+        'company_id'
     ];
 
     public function expenses()
@@ -36,4 +39,5 @@ public function bondecommandes()
 {
     return $this->hasMany(BonDeCommande::class);
 }
+public function company() { return $this->belongsTo(Company::class); }
 }

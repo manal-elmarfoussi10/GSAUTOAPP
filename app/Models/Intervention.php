@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\CompanyScoped; 
 
 class Intervention extends Model
 {
     use HasFactory;
+    use CompanyScoped;
 
     protected $fillable = [
         'poseur_id',
@@ -15,7 +17,8 @@ class Intervention extends Model
         'titre',
         'date',
         'commentaire',
-        'photo'
+        'photo',
+        'company_id'
     ];
 
     public function poseur()
@@ -37,4 +40,5 @@ class Intervention extends Model
     {
         return $this->hasMany(Commentaire::class);
     }
+    public function company() { return $this->belongsTo(Company::class); }
 }

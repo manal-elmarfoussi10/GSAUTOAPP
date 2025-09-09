@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Concerns\CompanyScoped; 
 
 class BonDeCommande extends Model
 {
     use HasFactory;
+    use CompanyScoped;
 
     protected $table = 'bons_de_commande';
 
@@ -20,6 +22,7 @@ class BonDeCommande extends Model
         'total_ht',
         'tva',
         'total_ttc',
+        'company_id'
     ];
 
     // 🔗 Relations
@@ -37,4 +40,5 @@ class BonDeCommande extends Model
     {
         return $this->hasMany(BonDeCommandeLigne::class);
     }
+    public function company() { return $this->belongsTo(Company::class); }
 }

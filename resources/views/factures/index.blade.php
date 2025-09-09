@@ -89,11 +89,18 @@
                 <tbody class="divide-y divide-gray-100">
                     @forelse ($factures as $facture)
                     @php
-                        $paye = $facture->paiements?->sum('montant') ?? 0;
-                        $avoir = $facture->avoirs?->sum('montant') ?? 0;
-                        $reste = $facture->total_ttc - $paye - $avoir;
+                        $paye   = $facture->paiements?->sum('montant') ?? 0;
+                        $avoir  = $facture->avoirs?->sum('montant') ?? 0;
+                        $reste  = $facture->total_ttc - $paye - $avoir;
                         $statusClass = $reste == 0 ? 'bg-green-100 text-green-800' : ($paye > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
-                        $statusText = $reste == 0 ? 'Acquittée' : ($paye > 0 ? 'Partiellement payée' : 'Non acquittée');
+                        $statusText  = $reste == 0 ? 'Acquittée' : ($paye > 0 ? 'Partiellement payée' : 'Non acquittée');
+
+                        // Name to display: client name OR prospect name from devis
+                        $displayName = $facture->client->nom_assure
+                                       ?? optional($facture->devis)->prospect_name
+                                       ?? '-';
+                        $subtitle    = $facture->client?->reference
+                                       ?? (optional($facture->devis)->prospect_name ? 'Prospect' : '');
                     @endphp
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4 whitespace-nowrap col-facture">
@@ -104,10 +111,15 @@
                                 #{{ $facture->id }}
                             </a>
                         </td>
+
+                        <!-- DOSSIER: show client name OR prospect name -->
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 col-dossier">
-                            <div class="font-medium">{{ $facture->client->nom_assure ?? '-' }}</div>
-                            <div class="text-xs text-gray-500 mt-1">{{ $facture->client->reference ?? '' }}</div>
+                            <div class="font-medium">{{ $displayName }}</div>
+                            @if($subtitle)
+                                <div class="text-xs text-gray-500 mt-1">{{ $subtitle }}</div>
+                            @endif
                         </td>
+
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 col-ht">{{ number_format($facture->total_ht, 2) }}€</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 col-ttc">{{ number_format($facture->total_ttc, 2) }}€</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 col-avoir">{{ number_format($avoir, 2) }}€</td>
@@ -130,27 +142,23 @@
                                 {{ $statusText }}
                             </span>
                         </td>
+
                         <td class="px-6 py-4 whitespace-nowrap text-sm col-actions">
-                            <div class=" sm:items-center gap-3">
-                           
-                                
+                            <div class="sm:items-center gap-3">
                                 @if ($reste > 0)
-                                <a href="{{ route('paiements.create', ['facture_id' => $facture->id]) }}" class="flex items-center gap-1 text-green-600 hover:text-green-800">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-                                        <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd" />
-                                    </svg>
-                                    Paiement
-                                </a>
-                                
-                                <a href="{{ route('avoirs.create.fromFacture', $facture->id) }}" class="flex items-center gap-1 text-purple-600 hover:text-purple-800">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
-                                    </svg>
-                                    Avoir
-                                </a>
-                                @else
-                          
+                                    <a href="{{ route('paiements.create', ['facture_id' => $facture->id]) }}" class="flex items-center gap-1 text-green-600 hover:text-green-800">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                                            <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd" />
+                                        </svg>
+                                        Paiement
+                                    </a>
+                                    <a href="{{ route('avoirs.create.fromFacture', $facture->id) }}" class="flex items-center gap-1 text-purple-600 hover:text-purple-800">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+                                        </svg>
+                                        Avoir
+                                    </a>
                                 @endif
                             </div>
                         </td>
@@ -201,22 +209,17 @@
         toggle.addEventListener('change', function() {
             const columnClass = this.dataset.column;
             const isVisible = this.checked;
-            
             document.querySelectorAll(`.${columnClass}`).forEach(cell => {
                 cell.style.display = isVisible ? '' : 'none';
             });
-            
-            // Store preference in localStorage
             localStorage.setItem(columnClass, isVisible);
         });
     });
 
-    // Load column preferences
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.column-toggle').forEach(toggle => {
             const columnClass = toggle.dataset.column;
             const isVisible = localStorage.getItem(columnClass) !== 'false';
-            
             toggle.checked = isVisible;
             document.querySelectorAll(`.${columnClass}`).forEach(cell => {
                 cell.style.display = isVisible ? '' : 'none';

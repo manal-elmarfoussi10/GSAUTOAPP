@@ -7,7 +7,7 @@
         <li>
             <a href="{{ route('clients.index') }}"
                class="flex items-center gap-3 px-3 py-2 rounded {{ request()->routeIs('clients.*') ? 'bg-[#FF4B00] text-white font-semibold' : 'hover:bg-orange-100 text-gray-700' }}">
-                <i data-lucide="users" class="w-4 h-4"></i> Gestion clients
+                <i data-lucide="users" class="w-4 h-4"></i> Gestion dossiers
             </a>
         </li>
         <li>
@@ -55,7 +55,7 @@
         <li>
             <a href="{{ route('bons-de-commande.index') }}"
                class="flex items-center gap-3 px-3 py-2 rounded {{ request()->routeIs('bons-de-commande.*') ? 'bg-[#FF4B00] text-white font-semibold' : 'hover:bg-orange-100 text-gray-700' }}">
-                <i data-lucide="package" class="w-4 h-4"></i> Bons de commandes
+                <i data-lucide="package" class="w-4 h-4"></i> Bon de livraison
             </a>
         </li>
         <li>
@@ -79,13 +79,13 @@
             <li><a href="{{ route('produits.index') }}" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-orange-100">
                 <i data-lucide="clipboard-list" class="w-4 h-4"></i> Produits</a></li>
             <li><a href="{{ route('poseurs.index') }}" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-orange-100">
-                <i data-lucide="hammer" class="w-4 h-4"></i> Poseurs</a></li>
+                <i data-lucide="hammer" class="w-4 h-4"></i> Techniciens</a></li>
             <li><a href="{{ route('stocks.index') }}" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-orange-100">
                 <i data-lucide="layers" class="w-4 h-4"></i> Stocks</a></li>
             <li><a href="{{ route('emails.inbox') }}" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-orange-100">
                 <i data-lucide="message-square" class="w-4 h-4"></i> Messages</a></li>
             <li><a href="{{ route('units.form') }}" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-orange-100">
-                <i data-lucide="shopping-cart" class="w-4 h-4"></i> Acheter des unités</a></li>
+                <i data-lucide="shopping-cart" class="w-4 h-4"></i> Acheter des crédits </li>
             <li><a href="{{ route('users.index') }}" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-orange-100">
                 <i data-lucide="users" class="w-4 h-4"></i> Mes utilisateurs</a></li>
             <li><a href="{{ route('consommation.index') }}" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-orange-100">

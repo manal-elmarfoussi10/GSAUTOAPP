@@ -11,9 +11,9 @@
                     <span class="bg-orange-500 text-white p-2 rounded-lg mr-3">
                         <i class="fas fa-user-plus"></i>
                     </span>
-                    Ajouter un nouveau poseur
+                    Ajouter un nouveau Technicien
                 </h1>
-                <p class="text-gray-600 mt-2">Remplissez les informations ci-dessous pour créer un nouveau poseur</p>
+                <p class="text-gray-600 mt-2">Remplissez les informations ci-dessous pour créer un nouveau technicien</p>
             </div>
             <a href="{{ route('poseurs.index') }}" class="flex items-center text-orange-600 hover:text-orange-800 font-medium">
                 <i class="fas fa-arrow-left mr-2"></i> Retour à la liste
@@ -99,7 +99,7 @@
                         <div class="flex items-center mt-4">
                             <input type="checkbox" name="actif" id="actif" value="1" class="h-4 w-4 text-orange-600 border-gray-300 rounded" checked>
                             <label for="actif" class="ml-2 block text-sm text-gray-700">
-                                Poseur actif <br><span class="text-gray-500 text-xs">Décochez pour désactiver ce poseur</span>
+                                Technicien actif <br><span class="text-gray-500 text-xs">Décochez pour désactiver ce poseur</span>
                             </label>
                         </div>
                     </div>
@@ -141,7 +141,7 @@
 
                     <div class="text-right mt-6">
                         <button type="submit" class="btn-primary text-white px-8 py-3 rounded-lg font-medium flex items-center justify-center w-full md:w-auto">
-                            <i class="fas fa-save mr-2"></i> Enregistrer le poseur
+                            <i class="fas fa-save mr-2"></i> Enregistrer le technicien
                         </button>
                     </div>
                 </div>

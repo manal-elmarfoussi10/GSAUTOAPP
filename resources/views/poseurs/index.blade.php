@@ -10,12 +10,12 @@
                     <span class="bg-orange-500 text-white p-2 rounded-lg mr-3">
                         <i class="fas fa-hard-hat"></i>
                     </span>
-                    Gestion des Poseurs
+                    Gestion des Techniciens
                 </h1>
-                <p class="text-gray-600 mt-2">Liste complète de vos poseurs avec options de gestion</p>
+                <p class="text-gray-600 mt-2">Liste complète de vos technicienss avec options de gestion</p>
             </div>
             <a href="{{ route('poseurs.create') }}" class="btn-primary text-white px-5 py-3 rounded-lg font-medium flex items-center justify-center w-full md:w-auto">
-                <i class="fas fa-plus mr-2"></i> Ajouter un poseur
+                <i class="fas fa-plus mr-2"></i> Ajouter un technicien
             </a>
         </div>
 
@@ -24,7 +24,7 @@
             <div class="card bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="text-gray-500 text-sm font-medium">Total Poseurs</p>
+                        <p class="text-gray-500 text-sm font-medium">Total Techniciens</p>
                         <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ $totalPoseurs }}</h3>
                     </div>
                     <div class="bg-orange-50 p-3 rounded-lg">
@@ -36,7 +36,7 @@
             <div class="card bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="text-gray-500 text-sm font-medium">Poseurs Actifs</p>
+                        <p class="text-gray-500 text-sm font-medium">Techniciens Actifs</p>
                         <h3 class="text-2xl font-bold text-gray-800 mt-1">{{ $activePoseurs }}</h3>
                     </div>
                     <div class="bg-green-50 p-3 rounded-lg">
@@ -75,7 +75,7 @@
                     <thead class="bg-gray-50">
                         <tr>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Poseur
+                                Technicien
                             </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Contact

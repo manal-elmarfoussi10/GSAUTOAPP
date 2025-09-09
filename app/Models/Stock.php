@@ -3,13 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\CompanyScoped; 
 
 class Stock extends Model
 {
+    use CompanyScoped;
     protected $fillable = [
         'date', 'client_id', 'libelle_dossier',
         'fournisseur_id', 'poseur_id', 'produit_id',
-        'reference', 'statut', 'accord'
+        'reference', 'statut', 'accord', 'company_id',
     ];
 
     protected $casts = [
@@ -21,4 +23,5 @@ class Stock extends Model
     public function fournisseur()  { return $this->belongsTo(Fournisseur::class); }
     public function poseur()       { return $this->belongsTo(Poseur::class); }
     public function produit()      { return $this->belongsTo(Produit::class); }
+    public function company() { return $this->belongsTo(Company::class); }
 }
