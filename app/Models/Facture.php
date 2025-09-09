@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\CompanyScoped; 
 
 class Facture extends Model
 {
+    use CompanyScoped;
     protected $fillable = [
         'client_id',
         'devis_id',
@@ -18,6 +20,7 @@ class Facture extends Model
         'is_paid',
         'date_paiement',
         'methode_paiement',
+        'company_id'
     ];
 
     public function client()
@@ -42,4 +45,11 @@ class Facture extends Model
     {
         return $this->hasMany(Avoir::class);
     }
+    public function company() { return $this->belongsTo(Company::class); }
+
+    public function getDisplayNameAttribute(): string
+{
+    return $this->client->nom_assure
+        ?? ($this->devis->prospect_name ?? '-');
+}
 }

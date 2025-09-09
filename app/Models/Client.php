@@ -7,10 +7,12 @@ use App\Models\Rdv;
 use App\Models\company;
 use App\Models\ConversationThread;
 use App\Models\Email;
+use App\Models\Concerns\CompanyScoped; 
 
 
 class Client extends Model
 {
+    use CompanyScoped;
     protected $fillable = [
         'nom_assure', 'prenom', 'email', 'telephone', 'adresse',
         'code_postal', 'ville', 'plaque', 'nom_assurance', 'autre_assurance',
@@ -18,7 +20,7 @@ class Client extends Model
         'raison', 'type_vitrage', 'professionnel', 'reparation',
         'photo_vitrage', 'photo_carte_verte', 'photo_carte_grise',
         'type_cadeau', 'numero_sinistre', 'kilometrage', 'connu_par',
-        'adresse_pose', 'reference_interne', 'reference_client', 'precision', 'statut'
+        'adresse_pose', 'reference_interne', 'reference_client', 'precision', 'statut', 'company_id'
     ];
     public function rdvs()
 {

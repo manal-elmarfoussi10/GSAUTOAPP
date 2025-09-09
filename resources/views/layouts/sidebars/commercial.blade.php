@@ -62,7 +62,7 @@
         </li>
 
         <li><a href="{{ route('poseurs.index') }}" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-orange-100">
-            <i data-lucide="hammer" class="w-4 h-4"></i> Poseurs</a></li>
+            <i data-lucide="hammer" class="w-4 h-4"></i> Techniciens</a></li>
     
             <li><a href="{{ route('emails.inbox') }}" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-orange-100">
                 <i data-lucide="message-square" class="w-4 h-4"></i> Messages</a></li>

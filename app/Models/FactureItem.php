@@ -13,6 +13,7 @@ class FactureItem extends Model
         'prix_unitaire',
         'remise',
         'total_ht',
+        'company_id'
     ];
 
     public function facture()

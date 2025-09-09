@@ -4,9 +4,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\CompanyScoped; 
 
 class Rdv extends Model
 {
+    use CompanyScoped;
     protected $fillable = [
         'poseur_id',
         'client_id',
@@ -14,7 +16,8 @@ class Rdv extends Model
         'end_time',
         'indisponible_poseur',
         'ga_gestion',
-        'status'
+        'status',
+        'company_id',
     ];
 
     protected $casts = [
@@ -33,4 +36,6 @@ class Rdv extends Model
     {
         return $this->belongsTo(Client::class);
     }
+    public function company() { return $this->belongsTo(Company::class); }
+
 }

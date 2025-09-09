@@ -7,14 +7,14 @@
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Gestion des bons de commande</h1>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Gestion des bons de livraison</h1>
             <p class="text-gray-600 mt-1">Liste complète de vos commandes en cours et historiques</p>
         </div>
         <a href="{{ route('bons-de-commande.create') }}" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-lg shadow-md flex items-center justify-center gap-2 transition-all duration-300">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
             </svg>
-            Ajouter un bon de commande
+            Ajouter un Bon de livraison
         </a>
     </div>
 
@@ -171,8 +171,8 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
-                            <p class="text-lg">Aucun bon de commande disponible</p>
-                            <p class="mt-2 text-gray-600">Commencez par ajouter votre premier bon de commande</p>
+                            <p class="text-lg">Aucun bon de livraison disponible</p>
+                            <p class="mt-2 text-gray-600">Commencez par ajouter votre premier bon de livraison</p>
                         </div>
                     </td>
                 </tr>

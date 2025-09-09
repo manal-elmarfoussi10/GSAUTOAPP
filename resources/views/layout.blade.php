@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>GG AUTO</title>
+    <title>GS AUTO</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Font Awesome & Tailwind -->
@@ -80,7 +80,7 @@
         <a href="{{ url('/acheter-unites') }}"
            class="px-2 py-1 rounded transition duration-150 focus:outline-none focus:ring-2 focus:ring-[#FF4B00]
                   {{ $isUnit ? 'bg-[#FF4B00] text-white' : 'text-[#FF4B00] hover:bg-[#FFA366] hover:text-white' }}">
-            NB UNITÉS : <span class="font-bold">{{ auth()->user()->company?->units ?? 0 }}</span>
+                  Crédit : <span class="font-bold">{{ auth()->user()->company?->units ?? 0 }}</span>
         </a>
     @endif
 
