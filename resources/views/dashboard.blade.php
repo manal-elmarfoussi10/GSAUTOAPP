@@ -509,7 +509,7 @@
                 }
             });
 
-            
+
             document.querySelectorAll('.custom-progress-fill').forEach(bar => {
                 const width = bar.style.width;
                 bar.style.width = '0%';
