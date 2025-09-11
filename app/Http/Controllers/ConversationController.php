@@ -8,168 +8,184 @@ use App\Models\Email;
 use App\Models\Reply;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 
 class ConversationController extends Controller
 {
+    /** Can the user act on this client? */
+    private function canActOnClient(Client $client, User $user): bool
+    {
+        if ($user->canSeeAllConversations()) return true;       // superadmin / service client
+        if (is_null($user->company_id)) return false;            // must belong to a company
+
+        // Allow if client's company matches OR client has no company (legacy)
+        return is_null($client->company_id) ||
+               (int)$client->company_id === (int)$user->company_id;
+    }
+
+    /** Show client’s conversations */
     public function show(Client $client)
     {
-        // Retrieve all emails in this client's thread
         $emails = $client->emails()
-            ->with(['senderUser', 'receiverUser', 'replies.senderUser'])
+            ->with([
+                'senderUser:id,name',
+                'receiverUser:id,name',
+                'replies.sender:id,name',
+                'replies.receiver:id,name',
+            ])
             ->orderBy('created_at')
             ->get();
 
-        // Only admins and client-service roles
-        $allowedRoles = [
-            User::ROLE_ADMIN,
-            User::ROLE_CLIENT_SERVICE,
-            User::ROLE_CLIENT_LIMITED,
-            User::ROLE_PLANNER,
-            User::ROLE_SUPERADMIN,
-        ];
+        $supportUsers = User::supportUsers()->orderBy('name')->get();
 
-        $users = User::where('company_id', Auth::user()->company_id)
-                     ->whereIn('role', $allowedRoles)
-                     ->get();
-
-        return view('clients.show', compact('client', 'emails', 'users'));
+        return view('clients.show', compact('client', 'emails', 'supportUsers'));
     }
+
+    /** Start a new conversation (broadcast to GS Auto support) */
     public function store(Request $request, Client $client)
     {
-        // Only admins and client-service roles
-        $allowedRoles = [
-            User::ROLE_ADMIN,
-            User::ROLE_CLIENT_SERVICE,
-        ];
+        $me = auth()->user();
+        if (! $this->canActOnClient($client, $me)) abort(403, 'Accès refusé.');
 
         $request->validate([
-            'receiver' => [
-                'required',
-                Rule::exists('users', 'id')->where(function($query) use ($allowedRoles) {
-                    $query->whereIn('role', $allowedRoles)
-                          ->where('company_id', Auth::user()->company_id);
-                }),
-            ],
-            'subject'  => 'required|string|max:255',
-            'content'  => 'required|string',
-            'file'     => 'nullable|file|max:2048',
-        ]);
-
-        // Create conversation thread
-        $thread = ConversationThread::create([
-            'client_id'  => $client->id,
-            'company_id' => Auth::user()->company_id,
-            'subject'    => $request->subject,
-            'creator_id' => Auth::id(),
-        ]);
-
-        // Create the initial email
-        $email = new Email([
-            'client_id'       => $client->id,
-            'company_id'      => Auth::user()->company_id,
-            'sender_id'       => Auth::id(),
-            'receiver_id'     => $request->receiver,
-            'subject'         => $request->subject,
-            'content'         => $request->content,
-            'folder'          => 'sent',
-        ]);
-
-        // Associate the email with the thread
-        $thread->emails()->save($email);
-
-        // File handling
-        if ($request->hasFile('file')) {
-            $path = $request->file('file')->store('conversations', 'public');
-            $email->file_path = $path;
-            $email->file_name = $request->file('file')->getClientOriginalName();
-            $email->save();
-        }
-
-        return back()->with('success', 'Conversation started!');
-    }
-
-    // app/Http/Controllers/ConversationController.php
-    public function reply(Request $request, Email $email)
-    {
-        // Only admins and client-service roles
-        $allowedRoles = [
-            User::ROLE_ADMIN,
-            User::ROLE_CLIENT_SERVICE,
-        ];
-
-        $rules = [
+            'subject' => 'required|string|max:255',
             'content' => 'required|string',
             'file'    => 'nullable|file|max:2048',
-        ];
-        // If receiver is a parameter in the request, validate similarly
-        if ($request->has('receiver')) {
-            $rules['receiver'] = [
-                'required',
-                Rule::exists('users', 'id')->where(function($query) use ($allowedRoles) {
-                    $query->whereIn('role', $allowedRoles)
-                          ->where('company_id', Auth::user()->company_id);
-                }),
-            ];
-        }
-        $request->validate($rules);
+        ]);
 
-        $receiverId = $request->has('receiver') ? $request->receiver : $email->sender_id;
+        // Resolve company id
+        $companyId = $client->company_id ?: $me->company_id;
+        if (is_null($client->company_id) && $me->company_id) {
+            $client->company_id = $me->company_id;  // normalize legacy data
+            $client->save();
+        }
+
+        // Create thread
+        $thread = ConversationThread::create([
+            'client_id'  => $client->id,
+            'company_id' => $companyId,
+            'subject'    => $request->subject,
+            'creator_id' => $me->id,
+        ]);
+
+        // Root email in thread
+        $email = new Email([
+            'client_id'   => $client->id,
+            'company_id'  => $companyId,
+            'sender_id'   => $me->id,
+            'receiver_id' => null,           // GS Auto support pool
+            'subject'     => $request->subject,
+            'content'     => $request->content,
+            'folder'      => 'sent',
+        ]);
+        $thread->emails()->save($email);      // sets email.thread_id
+
+        if ($request->hasFile('file')) {
+            $path = $request->file('file')->store('conversations', 'public');
+            $email->update([
+                'file_path' => $path,
+                'file_name' => $request->file('file')->getClientOriginalName(),
+            ]);
+        }
+
+        return back()->with('success', 'Conversation créée et envoyée au support GS Auto.');
+    }
+
+    /** Reply to an email inside a thread */
+    public function reply(Request $request, Email $email)
+    {
+        $me = auth()->user();
+        if ($email->client && ! $this->canActOnClient($email->client, $me)) {
+            abort(403, 'Accès refusé.');
+        }
+
+        $request->validate([
+            'content'  => 'required|string',
+            'file'     => 'nullable|file|max:2048',
+            'receiver' => 'nullable|exists:users,id',
+        ]);
+
+        $receiverId = $this->resolveCounterparty($email, $me->id, $request->integer('receiver'));
+        if (! $receiverId) return back()->withErrors("Impossible d’identifier le destinataire.");
 
         $reply = Reply::create([
-            'email_id'        => $email->id,
-            'conversation_id' => $email->thread_id,    // point at the correct column!
-            'sender_id'       => Auth::id(),
-            'receiver_id'     => $receiverId,
-            'content'         => $request->content,
+            'email_id'    => $email->id,
+            'thread_id'   => $email->thread_id,
+            'sender_id'   => $me->id,
+            'receiver_id' => $receiverId,
+            'content'     => $request->content,
         ]);
 
         if ($request->hasFile('file')) {
             $path = $request->file('file')->store('conversations', 'public');
-            $reply->file_path = $path;
-            $reply->file_name = $request->file('file')->getClientOriginalName();
-            $reply->save();
+            $reply->update([
+                'file_path' => $path,
+                'file_name' => $request->file('file')->getClientOriginalName(),
+            ]);
         }
 
-        return back()->with('success', 'Reply sent!');
+        // First reply sets the root receiver for better sorting
+        if (is_null($email->receiver_id)) {
+            $email->update(['receiver_id' => $receiverId]);
+        }
+
+        return back()->with('success', 'Réponse envoyée.');
     }
 
-     /**
-     * Fetch the latest messages HTML for live updates.
-     */
+    /** AJAX refresh */
     public function fetch(Client $client)
     {
         $emails = $client->emails()
-                         ->with(['senderUser','receiverUser','replies.senderUser'])
-                         ->orderBy('created_at')
-                         ->get();
+            ->with([
+                'senderUser:id,name',
+                'receiverUser:id,name',
+                'replies.sender:id,name',
+                'replies.receiver:id,name',
+            ])
+            ->orderBy('created_at')
+            ->get();
 
-        // Return just the rendered messages list
         return view('clients.partials._messages', compact('emails'));
     }
 
-
+    /** Delete a whole thread (emails + replies) */
     public function destroyThread(ConversationThread $thread)
     {
-        // Remove all emails & replies under this thread
-        $thread->emails()->each->replies()->delete();
+        $thread->emails()->each(fn (Email $email) => $email->replies()->delete());
         $thread->emails()->delete();
         $thread->delete();
 
-        return back()->with('success', 'Conversation deleted.');
+        return back()->with('success', 'Conversation supprimée.');
     }
 
+    /** Download a reply attachment */
     public function download(Reply $reply)
     {
-        $fullPath = storage_path('/storage/app/public/' . $reply->file_path);
-
-        if (! file_exists($fullPath)) {
-            abort(404);
-        }
-
+        $fullPath = storage_path('app/public/' . $reply->file_path);
+        if (! file_exists($fullPath)) abort(404);
         return response()->download($fullPath, $reply->file_name);
     }
 
+    /** Decide who receives the message */
+    private function resolveCounterparty(Email $email, int $currentUserId, ?int $override = null): ?int
+    {
+        if ($override) return $override;
+
+        $me = User::find($currentUserId, ['id','company_id']);
+        if (! $me) return null;
+
+        // Company user → send to GS Auto support (any global user)
+        if (! is_null($me->company_id)) {
+            return User::whereNull('company_id')->orderBy('id')->value('id');
+        }
+
+        // Support → send back to original company sender, or any user in that company
+        if ($email->sender_id && User::whereKey($email->sender_id)->whereNotNull('company_id')->exists()) {
+            return (int) $email->sender_id;
+        }
+        if ($email->company_id) {
+            return (int) User::where('company_id', $email->company_id)->orderBy('id')->value('id');
+        }
+
+        return User::whereNotNull('company_id')->orderBy('id')->value('id');
+    }
 }

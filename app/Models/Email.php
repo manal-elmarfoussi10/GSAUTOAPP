@@ -4,36 +4,35 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Conversation;
-use App\Models\Reply;
-use App\Models\User;
-use App\Models\Client;
-use App\Models\Company;
 
 class Email extends Model
 {
     use HasFactory;
 
- protected $fillable = [
-    'conversation_id',
-    'sender_id',
-    'receiver_id',
-    'subject',
-    'content',
-    'label',
-    'label_color',
-    'important',
-    'is_deleted',
-    'folder',
-    'client_id',
-    'company_id',
-    'file_path',      // ← ajoute ceci
-    'file_name',      // ← et ceci
-];
+    protected $fillable = [
+        'thread_id',      // ✅ use thread_id everywhere (not conversation_id)
+        'sender_id',
+        'receiver_id',    // can be NULL to broadcast to service
+        'subject',
+        'content',
+        'label',
+        'label_color',
+        'tag',            // if you use "important" via tag
+        'tag_color',
+        'important',      // keep only if you truly have this column
+        'is_deleted',
+        'is_read',        // if present
+        'folder',
+        'client_id',
+        'company_id',
+        'file_path',
+        'file_name',
+    ];
 
-    public function conversation()
+    /* Relationships */
+    public function thread()
     {
-        return $this->belongsTo(ConversationThread::class, 'conversation_id');
+        return $this->belongsTo(ConversationThread::class, 'thread_id');
     }
 
     public function senderUser()
@@ -58,21 +57,20 @@ class Email extends Model
 
     public function replies()
     {
-        return $this->hasMany(Reply::class);
+        // ascending so timeline reads top→bottom
+        return $this->hasMany(Reply::class)->orderBy('created_at');
     }
 
+    /* Scopes / helpers */
     public function scopeForCompany($query, $companyId)
     {
         return $query->where('company_id', $companyId);
     }
 
-    public function markAsRead()
-{
-    $this->update(['read' => true]);
-}
-
-public function conversationThread()
-{
-    return $this->belongsTo(ConversationThread::class, 'conversation_id');
-}
+    public function markAsRead(): void
+    {
+        if ($this->isFillable('is_read')) {
+            $this->update(['is_read' => true]);
+        }
+    }
 }

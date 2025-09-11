@@ -5,10 +5,21 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 use App\Http\Middleware\CompanyAccess;
 use App\Http\Middleware\SuperAdminAccess;
+
+// Superadmin area controllers
 use App\Http\Controllers\Superadmin\ClientsController as SAClientsController;
 use App\Http\Controllers\Superadmin\ProductController as SAProductController;
 use App\Http\Controllers\SuperAdmin\MessageController as SAMessageController;
+use App\Http\Controllers\SuperAdmin\EmailController as SAEmailController;
+use App\Http\Controllers\SuperAdmin\FilesController as SAFilesController;
+use App\Http\Controllers\SuperAdmin\{
+    SuperAdminDashboardController,
+    CompanyController as SuperAdminCompanyController,
+    GlobalUserController,
+    UserController as SuperAdminUserController,
+};
 
+// Tenant area controllers
 use App\Http\Controllers\{
     ProfileController,
     ClientController,
@@ -34,14 +45,6 @@ use App\Http\Controllers\{
     DashboardPoseurController,
     AccountController,
     ConversationController
-};
-
-use App\Http\Controllers\SuperAdmin\{
-    SuperAdminDashboardController,
-    CompanyController as SuperAdminCompanyController,
-    GlobalUserController,
-    UserController as SuperAdminUserController,
-    FilesController
 };
 
 /*
@@ -75,7 +78,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/mon-compte/supprimer', [AccountController::class, 'destroy'])->name('mon-compte.delete');
     Route::post('/mon-compte/supprimer-photo', [AccountController::class, 'deletePhoto'])->name('mon-compte.photo.delete');
 
-    // Poseur dashboard (general)
+    // Poseur dashboard (generic)
     Route::get('/poseur/dashboard', [PoseurController::class, 'dashboard'])->name('poseur.dashboard');
     Route::post('/poseur/intervention/{id}/commenter', [PoseurController::class, 'commenter'])->name('poseur.commenter');
 });
@@ -100,15 +103,13 @@ Route::middleware(['auth', CompanyAccess::class])
     Route::get('/clients/{client}/export-pdf', [ClientController::class, 'exportPdf'])->name('clients.export.pdf');
     Route::post('/clients/{client}/statut-interne', [ClientController::class, 'updateStatutInterne'])->name('clients.statut_interne');
 
-    // Conversations
+    // Conversations (tenant)
     Route::post('clients/{client}/conversations', [ConversationController::class, 'store'])->name('clients.conversations.store');
-    Route::post('/clients/{client}/conversation', [ConversationController::class, 'sendMessage'])->name('conversations.send');
-    Route::get('/clients/{client}/conversation', [ConversationController::class, 'show'])->name('clients.conversation');
+    Route::get('clients/{client}/conversation', [ConversationController::class, 'show'])->name('clients.conversation');
     Route::post('/conversations/reply/{email}', [ConversationController::class, 'reply'])->name('conversations.reply');
     Route::delete('conversations/{thread}', [ConversationController::class, 'destroyThread'])->name('conversations.destroyThread');
     Route::get('conversations/download/{reply}', [ConversationController::class, 'download'])->name('conversations.download');
     Route::get('conversations/fetch/{client}', [ConversationController::class, 'fetch'])->name('conversations.fetch');
-    Route::get('/replies/{reply}/download', [ConversationController::class, 'download'])->name('conversations.download.reply');
 
     // Calendar
     Route::get('/calendar', [RdvController::class, 'calendar'])->name('rdv.calendar');
@@ -162,9 +163,11 @@ Route::middleware(['auth', CompanyAccess::class])
     Route::get('bons-de-commande/export/excel', [BonDeCommandeController::class, 'exportExcel'])->name('bons-de-commande.export.excel');
     Route::get('bons-de-commande/export/pdf', [BonDeCommandeController::class, 'exportPDF'])->name('bons-de-commande.export.pdf');
 
-    // Emails
-    Route::resource('email-templates', EmailTemplateController::class)->only(['index', 'store', 'show']);
+    // Email templates
+    Route::resource('email-templates', EmailTemplateController::class)->only(['index','store','show']);
     Route::get('/email-templates', [EmailTemplateController::class, 'inbox'])->name('email-templates.inbox');
+
+    // Emails (tenant)
     Route::prefix('emails')->controller(EmailController::class)->group(function () {
         Route::get('/', 'inbox')->name('emails.inbox');
         Route::get('/sent', 'sent')->name('emails.sent');
@@ -172,9 +175,13 @@ Route::middleware(['auth', CompanyAccess::class])
         Route::get('/bin', 'bin')->name('emails.bin');
         Route::get('/create', 'create')->name('emails.create');
         Route::get('/notifications', 'notifications')->name('emails.notifications');
+
         Route::post('/mark-all-read', 'markAllRead')->name('emails.markAllRead');
+        Route::post('/upload', 'upload')->name('emails.upload');
+
         Route::post('/', 'store')->name('emails.store');
-        Route::get('/{id}', 'show')->name('emails.show');
+        Route::post('/{id}/reply', 'reply')->name('emails.reply');
+
         Route::post('/{id}/delete', 'destroy')->name('emails.delete');
         Route::post('/{id}/restore', 'restore')->name('emails.restore');
         Route::post('/{id}/toggle-star', 'toggleStar')->name('emails.toggleStar');
@@ -182,10 +189,11 @@ Route::middleware(['auth', CompanyAccess::class])
         Route::post('/{id}/toggle-important', 'toggleImportant')->name('emails.toggleImportant');
         Route::post('/{email}/mark-important', 'markImportant')->name('emails.markImportant');
         Route::post('/{email}/move-to-trash', 'moveToTrash')->name('emails.moveToTrash');
-        Route::get('/{email}/reply', 'reply')->name('emails.reply');
+
+        Route::get('/{id}', 'show')->name('emails.show');
     });
 
-    // Company
+    // Company profile
     Route::get('/profile', [CompanyController::class, 'show'])->name('company.profile');
     Route::get('/profile/edit', [CompanyController::class, 'edit'])->name('company.edit');
     Route::put('/profile/update', [CompanyController::class, 'update'])->name('company.update');
@@ -225,7 +233,7 @@ Route::middleware(['auth', CompanyAccess::class])
 
 /*
 |--------------------------------------------------------------------------
-| SUPERADMIN
+| SUPERADMIN (superadmin only)
 |--------------------------------------------------------------------------
 */
 Route::prefix('superadmin')
@@ -250,22 +258,59 @@ Route::prefix('superadmin')
     Route::resource('global-users', GlobalUserController::class)
         ->only(['index','create','store','edit','update','destroy']);
 
-    // Files
-// Superadmin Files (already OK)
-Route::get('/files', [FilesController::class, 'index'])->name('files.index');
-Route::get('/files/export', [FilesController::class, 'export'])->name('files.export');
+    // Products (superadmin catalogue)
+    Route::resource('products', SAProductController::class)->except(['show'])->names('products');
 
-// Superadmin Client show + pdf
-Route::get('/clients/{client}', [SAClientsController::class, 'show'])->name('clients.show');
-Route::get('/clients/{client}/export/pdf', [SAClientsController::class, 'exportPdf'])->name('clients.export.pdf');
+    // Messages (global inbox)
+    Route::resource('messages', SAMessageController::class)->only(['index','show','destroy'])->names('messages');
 
-Route::resource('products', SAProductController::class)
-    ->except(['show'])
-    ->names('products');
-
-    Route::resource('messages', SAMessageController::class)
-    ->only(['index', 'show', 'destroy'])
-    ->names('messages');
+    // Emails (superadmin)
+    Route::prefix('emails')->name('emails.')->controller(SAEmailController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/mark-all-read', 'markAllRead')->name('markAllRead');
+        Route::post('/upload', 'upload')->name('upload');
+        Route::post('/{email}/assign-receiver', 'assignReceiver')->name('assignReceiver');
+        Route::post('/{email}/reply', 'reply')->name('reply');
+        Route::post('/{email}/toggle-important', 'toggleImportant')->name('toggleImportant');
+        Route::post('/{email}/move-to-trash', 'moveToTrash')->name('moveToTrash');
+        Route::get('/{email}', 'show')->name('show');
+    });
 });
+
+
+// ==========================================
+// SUPPORT AREA (superadmin + client_service)
+// ==========================================
+// routes/web.php  (only the relevant part)
+
+Route::middleware(['auth','support'])
+    ->prefix('superadmin')
+    ->name('superadmin.')
+    ->group(function () {
+        // Clients dossier (visible to superadmin + client_service)
+        Route::get('/clients/{client}', [\App\Http\Controllers\Superadmin\ClientsController::class, 'show'])
+            ->name('clients.show');
+        Route::get('/clients/{client}/export/pdf', [\App\Http\Controllers\Superadmin\ClientsController::class, 'exportPdf'])
+            ->name('clients.export.pdf');
+
+        // Conversations (same permissions)
+        Route::post('clients/{client}/conversations', [\App\Http\Controllers\ConversationController::class, 'store'])
+            ->name('clients.conversations.store');
+        Route::post('conversations/reply/{email}', [\App\Http\Controllers\ConversationController::class, 'reply'])
+            ->name('conversations.reply');
+        Route::get('conversations/fetch/{client}', [\App\Http\Controllers\ConversationController::class, 'fetch'])
+            ->name('conversations.fetch');
+        Route::get('conversations/download/{reply}', [\App\Http\Controllers\ConversationController::class, 'download'])
+            ->name('conversations.download');
+        Route::delete('conversations/{thread}', [\App\Http\Controllers\ConversationController::class, 'destroyThread'])
+            ->name('conversations.destroyThread');
+
+        // You can also keep Files/Emails here if support must access them:
+        Route::get('/files', [\App\Http\Controllers\SuperAdmin\FilesController::class, 'index'])->name('files.index');
+        Route::get('/files/export', [\App\Http\Controllers\SuperAdmin\FilesController::class, 'export'])->name('files.export');
+        Route::get('/emails', [\App\Http\Controllers\SuperAdmin\EmailController::class, 'index'])->name('emails.index');
+        Route::get('/emails/{email}', [\App\Http\Controllers\SuperAdmin\EmailController::class, 'show'])->name('emails.show');
+        Route::post('/emails/{email}/reply', [\App\Http\Controllers\SuperAdmin\EmailController::class, 'reply'])->name('emails.reply');
+    });
 
 require __DIR__.'/auth.php';

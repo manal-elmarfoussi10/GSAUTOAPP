@@ -113,8 +113,6 @@
                             <select name="role" required class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 transition duration-150">
                                 <option value="">-- Sélectionner un rôle --</option>
                                 <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Administrateur</option>
-                                <option value="client_service" {{ old('role') == 'client_service' ? 'selected' : '' }}>Service client</option>
-                                <option value="limited_client_support" {{ old('role') == 'limited_client_support' ? 'selected' : '' }}>Service client limité</option>
                                 <option value="commercial" {{ old('role') == 'commercial' ? 'selected' : '' }}>Commercial</option>
                                 <option value="planner" {{ old('role') == 'planner' ? 'selected' : '' }}>Service Devis, commande et RDV</option>
                                 <option value="poseur" {{ old('role') == 'poseur' ? 'selected' : '' }}>Poseur</option>
