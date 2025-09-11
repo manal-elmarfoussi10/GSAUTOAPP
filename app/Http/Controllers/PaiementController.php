@@ -12,10 +12,10 @@ class PaiementController extends Controller
     {
         $facture_id = $request->facture_id; // passed in URL
         $facture = Facture::findOrFail($facture_id);
-    
+
         return view('paiements.create', compact('facture'));
     }
-    
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -25,9 +25,9 @@ class PaiementController extends Controller
             'date' => 'required|date',
             'commentaire' => 'nullable|string'
         ]);
-    
+
         Paiement::create($validated);
-    
+
         return redirect()->route('factures.index')->with('success', 'Paiement enregistré');
     }
 }

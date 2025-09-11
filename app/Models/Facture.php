@@ -42,4 +42,7 @@ class Facture extends Model
     {
         return $this->hasMany(Avoir::class);
     }
+
 }
+
+

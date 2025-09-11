@@ -11,14 +11,14 @@ class Devis extends Model
     use HasFactory;
 
     protected $fillable = [
-        'client_id', 
-        'titre', 
-        'date_devis', 
+        'client_id',
+        'titre',
+        'date_devis',
         'date_validite',
         'total_ht',
         'total_tva',
         'total_ttc',
-        
+
     ];
 
     public function client()
@@ -30,6 +30,8 @@ class Devis extends Model
     {
         return $this->hasMany(DevisItem::class);
     }
+
+
 }
 
 

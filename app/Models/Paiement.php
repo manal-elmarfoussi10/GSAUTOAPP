@@ -18,3 +18,4 @@ class Paiement extends Model
     return $this->belongsTo(Avoir::class);
 }
 }
+

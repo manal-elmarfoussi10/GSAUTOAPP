@@ -2,6 +2,20 @@
 
 @section('content')
 <div class="p-4 sm:p-6">
+
+
+    <style>
+        input[type=number].no-spinners::-webkit-outer-spin-button,
+        input[type=number].no-spinners::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number].no-spinners {
+            -moz-appearance: textfield;
+            appearance: textfield;      
+        }
+    </style>
+
     <!-- Header Section -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 p-6 bg-white rounded-xl shadow-sm border border-gray-100">
         <div>
@@ -19,7 +33,6 @@
     <form action="{{ route('factures.store') }}" method="POST" id="factureForm" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         @csrf
 
-        <!-- Debugging Section -->
         @if ($errors->any())
         <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
             <h3 class="text-red-800 font-medium mb-2">Erreurs de validation :</h3>
@@ -34,7 +47,7 @@
         <!-- Client Information Section -->
         <div class="mb-8">
             <h2 class="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Informations client</h2>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block mb-2 font-medium text-gray-700">Client <span class="text-red-500">*</span></label>
@@ -125,10 +138,10 @@
                                     @foreach($produits as $produit)
                                     <tr>
                                         <td class="px-4 py-3">
-                                            <input type="checkbox" class="produit-checkbox" data-id="{{ $produit->id }}" 
-                                                data-name="{{ $produit->nom }}" 
-                                                data-description="{{ $produit->description }}" 
-                                                data-price="{{ $produit->prix_ht }}" 
+                                            <input type="checkbox" class="produit-checkbox" data-id="{{ $produit->id }}"
+                                                data-name="{{ $produit->nom }}"
+                                                data-description="{{ $produit->description }}"
+                                                data-price="{{ $produit->prix_ht }}"
                                                 data-tva="{{ $produit->taux_tva }}">
                                         </td>
                                         <td class="px-4 py-3 font-medium">{{ $produit->nom }}</td>
@@ -175,18 +188,15 @@
         <!-- Summary Section -->
         <div class="bg-gray-50 rounded-lg p-6 mb-8">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Récapitulatif</h2>
-            
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="bg-white p-4 rounded-lg border border-gray-200">
                     <h3 class="font-medium text-gray-700 mb-2">Total HT</h3>
                     <p class="text-2xl font-bold text-gray-800" id="total-ht">0.00 €</p>
                 </div>
-                
                 <div class="bg-white p-4 rounded-lg border border-gray-200">
                     <h3 class="font-medium text-gray-700 mb-2">Total TVA</h3>
                     <p class="text-2xl font-bold text-gray-800" id="tva">0.00 €</p>
                 </div>
-                
                 <div class="bg-white p-4 rounded-lg border border-gray-200 bg-orange-50 border-orange-200">
                     <h3 class="font-medium text-orange-700 mb-2">Total TTC</h3>
                     <p class="text-2xl font-bold text-orange-700" id="total-ttc">0.00 €</p>
@@ -210,234 +220,181 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('Document loaded, initializing facture form');
-        let rowCount = 0;
-        
-        // Add produit row
-        function addProduitRow(produit = null) {
-            try {
-                console.log('Adding product row', produit);
-                const rowId = rowCount++;
-                const newRow = document.createElement('tr');
-                newRow.className = 'border-b';
-                
-                // Set default values if produit is provided
-                const defaultName = produit ? produit.name : '';
-                const defaultDesc = produit ? produit.description : '';
-                const defaultPrice = produit ? produit.price : '0';
-                const defaultTva = produit ? produit.tva : '20.00';
-                
-                newRow.innerHTML = `
-                    <td class="px-4 py-3">
-                        <input type="text" name="items[${rowId}][produit]" value="${defaultName}" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50" placeholder="Nom du produit" required>
-                    </td>
-                    <td class="px-4 py-3">
-                        <input type="text" name="items[${rowId}][description]" value="${defaultDesc}" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50" placeholder="Description">
-                    </td>
-                    <td class="px-4 py-3">
-                        <input type="number" name="items[${rowId}][quantite]" value="1" min="1" class="w-20 border border-gray-300 rounded px-3 py-2 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50" required>
-                    </td>
-                    <td class="px-4 py-3">
-                        <input type="number" step="0.01" name="items[${rowId}][prix_unitaire]" value="${defaultPrice}" min="0" class="w-24 border border-gray-300 rounded px-3 py-2 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50" required>
-                    </td>
-                    <td class="px-4 py-3">
-                        <input type="number" step="0.01" name="items[${rowId}][taux_tva]" value="${defaultTva}" min="0" class="w-20 border border-gray-300 rounded px-3 py-2 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50" required>
-                    </td>
-                    <td class="px-4 py-3">
-                        <input type="number" step="0.01" name="items[${rowId}][remise]" value="0" min="0" max="100" class="w-20 border border-gray-300 rounded px-3 py-2 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50">
-                    </td>
-                    <td class="px-4 py-3 text-right font-medium">
-                        <span class="total-cell">0.00 €</span>
-                    </td>
-                    <td class="px-4 py-3">
-                        <button type="button" class="delete-row-btn text-red-500 hover:text-red-700">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
-                    </td>
-                `;
-                
-                document.getElementById('itemsTable').appendChild(newRow);
-                
-                // Add event listeners to new inputs
-                const inputs = newRow.querySelectorAll('input');
-                inputs.forEach(input => {
-                    input.addEventListener('input', calculateTotals);
-                });
-                
-                // Add delete event
-                newRow.querySelector('.delete-row-btn').addEventListener('click', function() {
-                    console.log('Deleting row');
-                    newRow.remove();
-                    calculateTotals();
-                });
-                
-                // Calculate totals for this new row
+document.addEventListener('DOMContentLoaded', function() {
+    let rowCount = 0;
+
+    // Convertit "1,5" -> "1.5"
+    function normalize(value) {
+        if (typeof value !== 'string') return value;
+        return value.replace(/\s/g, '').replace(',', '.');
+    }
+
+    // Ajoute écouteurs pour normaliser virgules ET recalculer
+    function attachNumberHandlers(scopeEl) {
+        scopeEl.querySelectorAll('input[type="number"]').forEach(el => {
+            el.addEventListener('input', () => {
+                if (el.value.includes(',')) el.value = normalize(el.value);
                 calculateTotals();
-            } catch (error) {
-                console.error('Error adding product row:', error);
-            }
-        }
-        
-        // Add initial empty row
-        addProduitRow();
-        
-        // Add produit button
-        document.getElementById('addProductBtn').addEventListener('click', function() {
-            addProduitRow();
-        });
-        
-        // Add from catalog button
-        document.getElementById('addFromCatalogBtn').addEventListener('click', function() {
-            console.log('Opening product catalog');
-            document.getElementById('productCatalogModal').classList.remove('hidden');
-        });
-        
-        // Close catalog button
-        document.getElementById('closeCatalogBtn').addEventListener('click', function() {
-            console.log('Closing product catalog');
-            document.getElementById('productCatalogModal').classList.add('hidden');
-        });
-        
-        // Select all produits in catalog
-        document.getElementById('selectAllProduits').addEventListener('change', function(e) {
-            const checkboxes = document.querySelectorAll('.produit-checkbox');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = e.target.checked;
+            });
+            el.addEventListener('blur', () => {
+                if (el.value.includes(',')) el.value = normalize(el.value);
             });
         });
-        
-        // Add selected produits from catalog
-        document.getElementById('addSelectedBtn').addEventListener('click', function() {
-            console.log('Adding selected products');
-            const selectedProduits = document.querySelectorAll('.produit-checkbox:checked');
-            
-            if (selectedProduits.length === 0) {
-                alert('Veuillez sélectionner au moins un produit');
-                return;
-            }
-            
-            selectedProduits.forEach(checkbox => {
-                const produit = {
-                    name: checkbox.getAttribute('data-name'),
-                    description: checkbox.getAttribute('data-description'),
-                    price: checkbox.getAttribute('data-price'),
-                    tva: checkbox.getAttribute('data-tva')
-                };
-                addProduitRow(produit);
-            });
-            
-            // Close modal and reset selection
-            document.getElementById('productCatalogModal').classList.add('hidden');
-            document.getElementById('selectAllProduits').checked = false;
-            const checkboxes = document.querySelectorAll('.produit-checkbox');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = false;
-            });
-        });
-        
-        // Catalog search functionality
-        document.getElementById('catalogSearch').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            const rows = document.querySelectorAll('#catalogTable tr');
-            
-            rows.forEach(row => {
-                const name = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-                const description = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
-                const code = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
-                
-                if (name.includes(searchTerm) || description.includes(searchTerm) || code.includes(searchTerm)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        });
-        
-        // Calculate totals function
-        function calculateTotals() {
-            try {
-                console.log('Calculating totals');
-                let totalHT = 0;
-                let totalTVA = 0;
-                
-                // Calculate each row total
-                document.querySelectorAll('#itemsTable tr').forEach(row => {
-                    const quantity = parseFloat(row.querySelector('input[name*="quantite"]').value) || 0;
-                    const price = parseFloat(row.querySelector('input[name*="prix_unitaire"]').value) || 0;
-                    const tauxTva = parseFloat(row.querySelector('input[name*="taux_tva"]').value) || 0;
-                    const discount = parseFloat(row.querySelector('input[name*="remise"]').value) || 0;
-                    
-                    // Calculate row total HT
-                    let rowTotalHT = quantity * price;
-                    if (discount > 0) {
-                        rowTotalHT = rowTotalHT - (rowTotalHT * discount / 100);
-                    }
-                    
-                    // Calculate TVA for this row
-                    let rowTVA = rowTotalHT * (tauxTva / 100);
-                    
-                    // Update row total cell
-                    row.querySelector('.total-cell').textContent = rowTotalHT.toFixed(2) + ' €';
-                    
-                    totalHT += rowTotalHT;
-                    totalTVA += rowTVA;
-                });
-                
-                // Calculate TTC
-                const totalTTC = totalHT + totalTVA;
-                
-                // Update summary
-                document.getElementById('total-ht').textContent = totalHT.toFixed(2) + ' €';
-                document.getElementById('tva').textContent = totalTVA.toFixed(2) + ' €';
-                document.getElementById('total-ttc').textContent = totalTTC.toFixed(2) + ' €';
-            } catch (error) {
-                console.error('Error in calculateTotals:', error);
-            }
-        }
-        
-        // Add event listeners to existing inputs
-        document.querySelectorAll('#itemsTable input').forEach(input => {
+    }
+
+    function addProduitRow(produit = null) {
+        const rowId = rowCount++;
+        const newRow = document.createElement('tr');
+        newRow.className = 'border-b';
+
+        const defaultName = produit ? produit.name : '';
+        const defaultDesc = produit ? produit.description : '';
+        const defaultPrice = produit ? produit.price : '0';
+        const defaultTva  = produit ? produit.tva   : '20.00';
+
+        newRow.innerHTML = `
+            <td class="px-4 py-3">
+                <input type="text" name="items[${rowId}][produit]" value="${defaultName}" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50" placeholder="Nom du produit" required>
+            </td>
+            <td class="px-4 py-3">
+                <input type="text" name="items[${rowId}][description]" value="${defaultDesc}" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50" placeholder="Description">
+            </td>
+            <td class="px-4 py-3">
+                <input type="number" step="0.01" inputmode="decimal" name="items[${rowId}][quantite]" value="1" min="0" class="no-spinners w-20 border border-gray-300 rounded px-3 py-2 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50" required>
+            </td>
+            <td class="px-4 py-3">
+                <input type="number" step="0.01" inputmode="decimal" name="items[${rowId}][prix_unitaire]" value="${defaultPrice}" min="0" class="no-spinners w-24 border border-gray-300 rounded px-3 py-2 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50" required>
+            </td>
+            <td class="px-4 py-3">
+                <input type="number" step="0.01" inputmode="decimal" name="items[${rowId}][taux_tva]" value="${defaultTva}" min="0" class="no-spinners w-20 border border-gray-300 rounded px-3 py-2 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50" required>
+            </td>
+            <td class="px-4 py-3">
+                <input type="number" step="0.01" inputmode="decimal" name="items[${rowId}][remise]" value="0" min="0" max="100" class="no-spinners w-20 border border-gray-300 rounded px-3 py-2 focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50">
+            </td>
+            <td class="px-4 py-3 text-right font-medium">
+                <span class="total-cell">0.00 €</span>
+            </td>
+            <td class="px-4 py-3">
+                <button type="button" class="delete-row-btn text-red-500 hover:text-red-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </td>
+        `;
+
+        document.getElementById('itemsTable').appendChild(newRow);
+
+        // Écouteurs pour recalcul & normalisation
+        newRow.querySelectorAll('input').forEach(input => {
             input.addEventListener('input', calculateTotals);
         });
-        
-        // Form submission handler
-        document.getElementById('factureForm').addEventListener('submit', function(e) {
-            console.log('Form submission initiated');
-            
-            // Validate at least one product row exists
-            const productRows = document.querySelectorAll('#itemsTable tr');
-            if (productRows.length === 0) {
-                e.preventDefault();
-                alert('Veuillez ajouter au moins un produit');
-                return;
-            }
-            
-            // Validate each product row
-            let valid = true;
-            productRows.forEach((row, index) => {
-                const productName = row.querySelector('input[name*="produit"]').value;
-                const quantity = row.querySelector('input[name*="quantite"]').value;
-                const price = row.querySelector('input[name*="prix_unitaire"]').value;
-                const tva = row.querySelector('input[name*="taux_tva"]').value;
-                
-                if (!productName || !quantity || !price || !tva) {
-                    valid = false;
-                    row.style.backgroundColor = '#fff0f0';
-                }
-            });
-            
-            if (!valid) {
-                e.preventDefault();
-                alert('Veuillez remplir tous les champs requis pour chaque produit');
+        attachNumberHandlers(newRow);
+
+        newRow.querySelector('.delete-row-btn').addEventListener('click', function() {
+            newRow.remove();
+            calculateTotals();
+        });
+
+        calculateTotals();
+    }
+
+    // Init
+    addProduitRow();
+
+    document.getElementById('addProductBtn').addEventListener('click', () => addProduitRow());
+
+    document.getElementById('addFromCatalogBtn').addEventListener('click', () => {
+        document.getElementById('productCatalogModal').classList.remove('hidden');
+    });
+
+    document.getElementById('closeCatalogBtn').addEventListener('click', () => {
+        document.getElementById('productCatalogModal').classList.add('hidden');
+    });
+
+    document.getElementById('selectAllProduits').addEventListener('change', function(e) {
+        document.querySelectorAll('.produit-checkbox').forEach(cb => cb.checked = e.target.checked);
+    });
+
+    document.getElementById('addSelectedBtn').addEventListener('click', function() {
+        const selected = document.querySelectorAll('.produit-checkbox:checked');
+        if (!selected.length) return alert('Veuillez sélectionner au moins un produit');
+
+        selected.forEach(checkbox => {
+            const produit = {
+                name: checkbox.getAttribute('data-name'),
+                description: checkbox.getAttribute('data-description'),
+                price: checkbox.getAttribute('data-price'),
+                tva: checkbox.getAttribute('data-tva')
+            };
+            addProduitRow(produit);
+        });
+
+        document.getElementById('productCatalogModal').classList.add('hidden');
+        document.getElementById('selectAllProduits').checked = false;
+        document.querySelectorAll('.produit-checkbox').forEach(cb => cb.checked = false);
+    });
+
+    function calculateTotals() {
+        let totalHT = 0, totalTVA = 0;
+
+        document.querySelectorAll('#itemsTable tr').forEach(row => {
+            const qVal  = normalize(row.querySelector('input[name*="quantite"]').value);
+            const pVal  = normalize(row.querySelector('input[name*="prix_unitaire"]').value);
+            const tvaVal= normalize(row.querySelector('input[name*="taux_tva"]').value);
+            const dVal  = normalize(row.querySelector('input[name*="remise"]').value);
+
+            const quantity = parseFloat(qVal)  || 0;
+            const price    = parseFloat(pVal)  || 0;
+            const tauxTva  = parseFloat(tvaVal)|| 0;
+            const discount = parseFloat(dVal)  || 0;
+
+            let rowTotalHT = quantity * price;
+            if (discount > 0) rowTotalHT -= (rowTotalHT * discount / 100);
+
+            const rowTVA = rowTotalHT * (tauxTva / 100);
+
+            row.querySelector('.total-cell').textContent = rowTotalHT.toFixed(2) + ' €';
+
+            totalHT += rowTotalHT;
+            totalTVA += rowTVA;
+        });
+
+        const totalTTC = totalHT + totalTVA;
+
+        document.getElementById('total-ht').textContent = totalHT.toFixed(2) + ' €';
+        document.getElementById('tva').textContent = totalTVA.toFixed(2) + ' €';
+        document.getElementById('total-ttc').textContent = totalTTC.toFixed(2) + ' €';
+    }
+
+    // Normaliser toutes les entrées number déjà présentes (si besoin)
+    attachNumberHandlers(document);
+
+    document.getElementById('factureForm').addEventListener('submit', function(e) {
+        const rows = document.querySelectorAll('#itemsTable tr');
+        if (!rows.length) {
+            e.preventDefault();
+            return alert('Veuillez ajouter au moins un produit');
+        }
+
+        let valid = true;
+        rows.forEach(row => {
+            const productName = row.querySelector('input[name*="produit"]').value;
+            const quantity    = row.querySelector('input[name*="quantite"]').value;
+            const price       = row.querySelector('input[name*="prix_unitaire"]').value;
+            const tva         = row.querySelector('input[name*="taux_tva"]').value;
+
+            if (!productName || !quantity || !price || !tva) {
+                valid = false;
+                row.style.backgroundColor = '#fff0f0';
             }
         });
-        
-        // Initial calculation
-        calculateTotals();
-        console.log('Facture form initialized successfully');
+
+        if (!valid) {
+            e.preventDefault();
+            alert('Veuillez remplir tous les champs requis pour chaque produit');
+        }
     });
+});
 </script>
 @endsection
