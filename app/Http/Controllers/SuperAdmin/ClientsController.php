@@ -7,18 +7,29 @@ use App\Models\Client;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ClientsController extends Controller
 {
+    /**
+     * Show a client's dossier for support (superadmin + client_service).
+     * Bypasses tenant/global scopes. Soft-deletes are included only if the model uses SoftDeletes.
+     */
     public function show($id)
     {
-        abort_unless(auth()->user()?->role === 'superadmin', 403);
+        // Allow superadmin + client_service only
+        abort_unless(
+            auth()->check() &&
+            in_array(auth()->user()->role, [User::ROLE_SUPERADMIN, User::ROLE_CLIENT_SERVICE], true),
+            403
+        );
 
+        // Disable debugbar if present
         if (class_exists(\Barryvdh\Debugbar\Facades\Debugbar::class)) {
             \Barryvdh\Debugbar\Facades\Debugbar::disable();
         }
 
-        // Pick only client columns that actually exist (defensive)
+        // Defensive column list
         $candidateCols = [
             'id','company_id','prenom','nom_assure','plaque',
             'email','telephone','adresse','kilometrage','type_vitrage',
@@ -33,46 +44,58 @@ class ClientsController extends Controller
         $existingCols = Schema::getColumnListing('clients');
         $selectCols   = array_values(array_intersect($candidateCols, $existingCols));
 
-        $client = Client::query()
-            ->when(!empty($selectCols), fn($q) => $q->select($selectCols))
+        // Start query without tenant/global scopes
+        $query = Client::query()->withoutGlobalScopes();
+
+        // Include soft-deleted rows only if the model uses SoftDeletes
+        if (in_array(SoftDeletes::class, class_uses_recursive(Client::class), true)) {
+            $query->withTrashed();
+        }
+
+        $client = $query
+            ->when($selectCols, fn ($q) => $q->select($selectCols))
             ->with([
-                // Keep these relaxed to avoid “unknown column” surprises
                 'factures'        => fn($q) => $q->latest()->limit(100),
-                'factures.avoirs' => fn($q) => $q,     // no explicit select
+                'factures.avoirs' => fn($q) => $q,
                 'devis'           => fn($q) => $q->latest()->limit(100),
                 'photos'          => fn($q) => $q->latest()->limit(20),
-
-                // ⬇️ DO NOT force a select list here (your table doesn’t have creator_id)
                 'conversations' => function ($q) {
                     $q->with([
-                        // This will simply return null if your relation/column doesn’t exist
                         'creator:id,name',
                         'emails' => function ($q) {
-                            $q->select('id','thread_id','sender_id','receiver_id','content',
-                                       'file_path','file_name','created_at')
-                              ->latest()->limit(10)
-                              ->with([
-                                  'senderUser:id,name',
-                                  'receiverUser:id,name',
-                                  'replies' => function ($qr) {
-                                      $qr->select('id','email_id','sender_id','receiver_id','content',
-                                                  'file_path','file_name','created_at')
-                                         ->latest()->limit(10)
-                                         ->with(['senderUser:id,name','receiverUser:id,name']);
-                                  }
-                              ]);
+                            $q->select(
+                                    'id','thread_id','sender_id','receiver_id','content',
+                                    'file_path','file_name','created_at'
+                                )
+                                ->latest()->limit(10)
+                                ->with([
+                                    'senderUser:id,name',
+                                    'receiverUser:id,name',
+                                    'replies' => function ($qr) {
+                                        $qr->select(
+                                            'id','email_id','sender_id','receiver_id','content',
+                                            'file_path','file_name','created_at'
+                                        )
+                                        ->latest()->limit(10)
+                                        ->with(['senderUser:id,name','receiverUser:id,name']);
+                                    }
+                                ]);
                         }
                     ])->latest();
                 }
             ])
-            ->findOrFail($id);
+            ->findOrFail((int) $id);
 
         $statutLabel = $this->deriveStatutLabel($client);
 
+        // Users for the “new conversation” select
         $companyIdForUsers = $client->company_id ?? auth()->user()->company_id;
-        $users = User::where('company_id', $companyIdForUsers)->select('id','name')->get();
+        $users = User::query()
+            ->when($companyIdForUsers, fn($q) => $q->where('company_id', $companyIdForUsers))
+            ->select('id','name')
+            ->orderBy('name')
+            ->get();
 
-        // NOTE: view path now superadmin/clients/show.blade.php as in your tree
         return view('superadmin.clients.show', compact('client','users','statutLabel'));
     }
 
@@ -86,27 +109,34 @@ class ClientsController extends Controller
         return 'En attente';
     }
 
-// app/Http/Controllers/Superadmin/ClientsController.php
+    /**
+     * Export dossier as PDF for support (superadmin + client_service).
+     * Avoid implicit binding to prevent scope issues.
+     */
+    public function exportPdf($id)
+    {
+        abort_unless(
+            auth()->check() &&
+            in_array(auth()->user()->role, [User::ROLE_SUPERADMIN, User::ROLE_CLIENT_SERVICE], true),
+            403
+        );
 
-public function exportPdf(Client $client)
-{
-    abort_unless(auth()->user()?->role === 'superadmin', 403);
+        $query = Client::query()->withoutGlobalScopes();
+        if (in_array(SoftDeletes::class, class_uses_recursive(Client::class), true)) {
+            $query->withTrashed();
+        }
 
-    // Load only what the PDF needs
-    $client->load(['factures.avoirs', 'factures', 'devis', 'photos']);
+        $client = $query->findOrFail((int) $id);
+        $client->load(['factures.avoirs', 'factures', 'devis', 'photos']);
 
-    // Make sure DomPDF knows where /public is and can load assets
-    config([
-        'dompdf.public_path' => base_path('public'),
-    ]);
+        config(['dompdf.public_path' => base_path('public')]);
 
-    $pdf = \Barryvdh\DomPDF\Facade\Pdf::setOptions([
-            'isRemoteEnabled' => true,           // allow absolute URLs (e.g. url('/storage/...'))
-            'chroot'          => base_path('public'), // sandbox root for local files
-        ])
-        ->loadView('clients.pdf', compact('client')); // <-- file at resources/views/clients/pdf.blade.php
+        $pdf = Pdf::setOptions([
+                'isRemoteEnabled' => true,
+                'chroot'          => base_path('public'),
+            ])
+            ->loadView('clients.pdf', compact('client'));
 
-    $filename = 'client_' . $client->id . '_' . now()->format('Ymd_His') . '.pdf';
-    return $pdf->download($filename);
-}
+        return $pdf->download('client_'.$client->id.'_'.now()->format('Ymd_His').'.pdf');
+    }
 }

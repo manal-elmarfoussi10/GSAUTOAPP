@@ -60,7 +60,7 @@ public function update(Request $request, Company $company, User $user)
     ]);
 
     // block global-only roles just in case
-    if (in_array($validated['role'], ['client_service','client_limited','superadmin'])) {
+    if (in_array($validated['role'], ['client_service','superadmin'])) {
         return back()->withErrors(['role' => 'Ce rôle est réservé au SuperAdmin.'])->withInput();
     }
 

@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Superadmin;
+namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Database\Eloquent\Builder;
+use App\Models\User;
 
 use App\Models\Client;
 use App\Models\Devis;
@@ -14,7 +15,6 @@ use App\Models\Facture;
 use App\Models\Avoir;
 use App\Models\Paiement;
 use App\Models\Company;
-
 use App\Models\Rdv;
 use App\Models\Expense;
 use App\Models\BonDeCommande;
@@ -25,14 +25,24 @@ use App\Models\Stock;
 
 class FilesController extends Controller
 {
+    /** Build a base query. For support users (superadmin + client_service) we remove global scopes. */
+    private function q(string $modelClass)
+    {
+        $user = auth()->user();
+        $isSupport = $user && in_array($user->role, [User::ROLE_SUPERADMIN, User::ROLE_CLIENT_SERVICE], true);
+        return $isSupport ? $modelClass::query()->withoutGlobalScopes()
+                          : $modelClass::query();
+    }
+
     public function index(Request $request)
     {
-        abort_unless(auth()->user()?->role === 'superadmin', 403);
+        $user = auth()->user();
+        abort_unless($user && in_array($user->role, [User::ROLE_SUPERADMIN, User::ROLE_CLIENT_SERVICE], true), 403);
 
         $type = $request->input('type', 'clients');
 
-        $companies = Company::query()
-            ->select(['id','name'])
+        $companies = $this->q(Company::class)
+            ->select(['id', 'name'])
             ->orderBy('name')
             ->get();
 
@@ -54,7 +64,8 @@ class FilesController extends Controller
 
     public function export(Request $request)
     {
-        abort_unless(auth()->user()?->role === 'superadmin', 403);
+        // si tu veux autoriser le service client à exporter, ajoute ROLE_CLIENT_SERVICE ici
+        abort_unless(auth()->user() && auth()->user()->role === User::ROLE_SUPERADMIN, 403);
 
         $type = $request->input('type', 'clients');
         [$columns, $rows] = $this->buildQuery($type, $request, false);
@@ -68,8 +79,8 @@ class FilesController extends Controller
 
         $callback = function () use ($columns, $rows, $type) {
             $out = fopen('php://output', 'w');
-            fwrite($out, chr(0xEF).chr(0xBB).chr(0xBF)); // UTF-8 BOM
-            fputcsv($out, array_values($columns), ';');  // header
+            fwrite($out, chr(0xEF).chr(0xBB).chr(0xBF));     // UTF-8 BOM
+            fputcsv($out, array_values($columns), ';');       // header
 
             foreach ($rows as $row) {
                 $line = [];
@@ -84,10 +95,7 @@ class FilesController extends Controller
         return Response::stream($callback, 200, $headers);
     }
 
-    /**
-     * Build columns + dataset for each type with filters.
-     * @return array [$columns, $results]
-     */
+    /** Build columns + dataset for each type with filters. */
     private function buildQuery(string $type, Request $request, bool $paginate): array
     {
         $dateFrom   = $request->input('date_from');
@@ -95,13 +103,12 @@ class FilesController extends Controller
         $companyId  = $request->input('company_id');
         $q          = trim((string) $request->input('q', ''));
 
-        // Helper: pick the existing product name column
+        // choose existing product name column
         $productNameCol = Schema::hasColumn('produits','designation') ? 'designation'
                          : (Schema::hasColumn('produits','name') ? 'name'
                          : (Schema::hasColumn('produits','nom') ? 'nom' : null));
 
         switch ($type) {
-            // ───────────────────────── DEVIS ─────────────────────────
             case 'devis': {
                 $columns = [
                     'created_at' => 'Date',
@@ -111,7 +118,7 @@ class FilesController extends Controller
                     'total_ttc'  => 'Total TTC',
                 ];
 
-                $query = Devis::query()
+                $query = $this->q(Devis::class)
                     ->with(['client' => function($q){
                         $q->select('id','nom_assure','prenom','email','telephone','company_id');
                     }])
@@ -143,7 +150,6 @@ class FilesController extends Controller
                 return [$columns, $results];
             }
 
-            // ───────────────────────── FACTURES ─────────────────────────
             case 'factures': {
                 $columns = [
                     'date_facture' => 'Date',
@@ -154,7 +160,7 @@ class FilesController extends Controller
                     'is_paid'      => 'Payée',
                 ];
 
-                $query = Facture::query()
+                $query = $this->q(Facture::class)
                     ->with(['client' => function($q){
                         $q->select('id','nom_assure','prenom','email','telephone','company_id');
                     }])
@@ -186,7 +192,6 @@ class FilesController extends Controller
                 return [$columns, $results];
             }
 
-            // ───────────────────────── AVOIRS ─────────────────────────
             case 'avoirs': {
                 $columns = [
                     'created_at' => 'Date',
@@ -195,7 +200,7 @@ class FilesController extends Controller
                     'montant'    => 'Montant',
                 ];
 
-                $query = Avoir::query()
+                $query = $this->q(Avoir::class)
                     ->with(['facture.client' => function($q){
                         $q->select('id','nom_assure','prenom','email','telephone','company_id');
                     }])
@@ -230,7 +235,6 @@ class FilesController extends Controller
                 return [$columns, $results];
             }
 
-            // ───────────────────────── PAIEMENTS ─────────────────────────
             case 'paiements': {
                 $columns = [
                     'date_paiement' => 'Date',
@@ -243,7 +247,7 @@ class FilesController extends Controller
                 $dateCol  = Schema::hasColumn('paiements','date') ? 'date'
                            : (Schema::hasColumn('paiements','date_paiement') ? 'date_paiement' : 'created_at');
 
-                $query = Paiement::query()
+                $query = $this->q(Paiement::class)
                     ->with(['facture.client' => function($q){
                         $q->select('id','nom_assure','prenom','email','telephone','company_id');
                     }])
@@ -280,7 +284,6 @@ class FilesController extends Controller
                 return [$columns, $results];
             }
 
-            // ───────────────────────── RDV ─────────────────────────
             case 'rdv':
             case 'rdvs': {
                 $columns = [
@@ -292,10 +295,9 @@ class FilesController extends Controller
                     'status'     => 'Statut',
                 ];
 
-                $query = Rdv::query()
+                $query = $this->q(Rdv::class)
                     ->with([
                         'client:id,nom_assure,prenom,email,telephone,company_id',
-                        // pas de "prenom" sur poseurs
                         'poseur:id,nom,email,telephone'
                     ])
                     ->orderBy('start_time','desc');
@@ -330,7 +332,6 @@ class FilesController extends Controller
                 return [$columns, $results];
             }
 
-            // ───────────────────────── DÉPENSES ─────────────────────────
             case 'depenses':
             case 'expenses': {
                 $columns = [
@@ -342,7 +343,7 @@ class FilesController extends Controller
                     'ttc_amount'    => 'TTC',
                 ];
 
-                $query = Expense::query()
+                $query = $this->q(Expense::class)
                     ->with([
                         'client:id,nom_assure,prenom,email,telephone,company_id',
                         'fournisseur:id,nom_societe,company_id'
@@ -380,7 +381,6 @@ class FilesController extends Controller
                 return [$columns, $results];
             }
 
-            // ───────────────────────── BONS DE COMMANDE ─────────────────────────
             case 'bons':
             case 'bons_de_commande':
             case 'purchase_orders': {
@@ -395,7 +395,7 @@ class FilesController extends Controller
 
                 $dateCol = Schema::hasColumn('bon_de_commandes','date') ? 'date' : 'created_at';
 
-                $query = BonDeCommande::query()
+                $query = $this->q(BonDeCommande::class)
                     ->with('fournisseur:id,nom_societe,company_id')
                     ->orderBy($dateCol,'desc');
 
@@ -417,7 +417,6 @@ class FilesController extends Controller
                 return [$columns, $results];
             }
 
-            // ───────────────────────── FOURNISSEURS ─────────────────────────
             case 'fournisseurs': {
                 $columns = [
                     'created_at' => 'Date',
@@ -425,7 +424,7 @@ class FilesController extends Controller
                     'contact'    => 'Contact',
                 ];
 
-                $query = Fournisseur::query()->orderBy('nom_societe');
+                $query = $this->q(Fournisseur::class)->orderBy('nom_societe');
 
                 if ($companyId && Schema::hasColumn('fournisseurs','company_id')) {
                     $query->where('company_id',$companyId);
@@ -445,7 +444,6 @@ class FilesController extends Controller
                 return [$columns, $results];
             }
 
-            // ───────────────────────── PRODUITS ─────────────────────────
             case 'produits': {
                 $columns = [
                     'created_at' => 'Date',
@@ -455,7 +453,7 @@ class FilesController extends Controller
                     'stock'      => 'Stock',
                 ];
 
-                $query = Produit::query()->latest('created_at');
+                $query = $this->q(Produit::class)->latest('created_at');
 
                 if ($companyId && Schema::hasColumn('produits','company_id')) {
                     $query->where('company_id',$companyId);
@@ -476,7 +474,6 @@ class FilesController extends Controller
                 return [$columns, $results];
             }
 
-            // ───────────────────────── POSEURS ─────────────────────────
             case 'poseurs': {
                 $columns = [
                     'created_at' => 'Date',
@@ -484,7 +481,7 @@ class FilesController extends Controller
                     'contact'    => 'Contact',
                 ];
 
-                $query = Poseur::query()->orderBy('nom');
+                $query = $this->q(Poseur::class)->orderBy('nom');
 
                 if ($companyId && Schema::hasColumn('poseurs','company_id')) {
                     $query->where('company_id',$companyId);
@@ -493,7 +490,6 @@ class FilesController extends Controller
                 $this->applyDateRange($query, $dateFrom, $dateTo, 'created_at');
 
                 if ($q !== '') {
-                    // NOTE: pas de 'prenom' dans poseurs
                     $query->where(function(Builder $b) use ($q) {
                         $b->where('nom','like',"%$q%")
                           ->orWhere('email','like',"%$q%")
@@ -505,7 +501,6 @@ class FilesController extends Controller
                 return [$columns, $results];
             }
 
-            // ───────────────────────── STOCKS ─────────────────────────
             case 'stocks': {
                 $columns = [
                     'created_at' => 'Date',
@@ -515,15 +510,14 @@ class FilesController extends Controller
                     'location'   => 'Emplacement',
                 ];
 
-                // Eager-load only existing product columns
                 $productSelect = array_values(array_filter([
                     'id',
-                    $productNameCol,            // designation|name|nom or null
+                    $productNameCol,
                     Schema::hasColumn('produits','reference') ? 'reference' : null,
                     Schema::hasColumn('produits','company_id') ? 'company_id' : null,
                 ]));
 
-                $query = Stock::query()
+                $query = $this->q(Stock::class)
                     ->with(['produit' => function($q) use ($productSelect) {
                         if (!empty($productSelect)) {
                             $q->select($productSelect);
@@ -557,7 +551,6 @@ class FilesController extends Controller
                 return [$columns, $results];
             }
 
-            // ───────────────────────── CLIENTS (default) ─────────────────────────
             case 'clients':
             default: {
                 $columns = [
@@ -568,7 +561,7 @@ class FilesController extends Controller
                     'statut'     => 'Statut',
                 ];
 
-                $query = Client::query()->latest('created_at');
+                $query = $this->q(Client::class)->latest('created_at');
 
                 if ($companyId && Schema::hasColumn('clients','company_id')) {
                     $query->where('company_id', $companyId);
@@ -610,9 +603,7 @@ class FilesController extends Controller
         });
     }
 
-    /**
-     * Render a single cell for HTML or CSV.
-     */
+    /** Render a single cell for HTML or CSV. */
     public static function renderCell(string $type, string $key, $row, bool $plain = false)
     {
         $money = fn($v) => number_format((float)($v ?? 0), 2, ',', ' ').' €';

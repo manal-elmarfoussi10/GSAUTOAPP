@@ -45,28 +45,27 @@ class User extends Authenticatable
     }
 
     // Role constants
-    public const ROLE_ADMIN           = 'admin';
-    public const ROLE_CLIENT_SERVICE  = 'client_service';
-    public const ROLE_CLIENT_LIMITED  = 'client_limited';
-    public const ROLE_COMMERCIAL      = 'commercial';
-    public const ROLE_PLANNER         = 'planner';
-    public const ROLE_INSTALLER       = 'poseur';
-    public const ROLE_ACCOUNTANT      = 'comptable';
-    public const ROLE_SUPERADMIN = 'superadmin';
-
+    public const ROLE_ADMIN          = 'admin';
+    public const ROLE_CLIENT_SERVICE = 'client_service';
+    public const ROLE_CLIENT_LIMITED = 'client_limited';
+    public const ROLE_COMMERCIAL     = 'commercial';
+    public const ROLE_PLANNER        = 'planner';
+    public const ROLE_INSTALLER      = 'poseur';
+    public const ROLE_ACCOUNTANT     = 'comptable';
+    public const ROLE_SUPERADMIN     = 'superadmin';
 
     // Role labels for selection/dropdowns
     public static function roles()
     {
         return [
-            self::ROLE_ADMIN           => 'Administrateur',
-            self::ROLE_CLIENT_SERVICE  => 'Service client',
-            self::ROLE_CLIENT_LIMITED  => 'Service client limité',
-            self::ROLE_COMMERCIAL      => 'Commercial',
-            self::ROLE_PLANNER         => 'Service Devis, commande et RDV',
-            self::ROLE_INSTALLER       => 'Poseur',
-            self::ROLE_ACCOUNTANT      => 'Comptable',
-            self::ROLE_SUPERADMIN      => 'Super Administrateur',
+            self::ROLE_ADMIN          => 'Administrateur',
+            self::ROLE_CLIENT_SERVICE => 'Service client',
+            self::ROLE_CLIENT_LIMITED => 'Service client limité',
+            self::ROLE_COMMERCIAL     => 'Commercial',
+            self::ROLE_PLANNER        => 'Service Devis, commande et RDV',
+            self::ROLE_INSTALLER      => 'Poseur',
+            self::ROLE_ACCOUNTANT     => 'Comptable',
+            self::ROLE_SUPERADMIN     => 'Super Administrateur',
         ];
     }
 
@@ -83,19 +82,39 @@ class User extends Authenticatable
     }
 
     public function getRoleLabelAttribute()
+    {
+        $roles = self::roles();
+        return $roles[$this->role] ?? $this->role;
+    }
+
+    public function replies()
+    {
+        return $this->hasMany(Reply::class, 'sender_id');
+    }
+
+    public function getUnitsAttribute(): int
+    {
+        // Backwards compatibility for old views that call $user->units
+        return (int) ($this->company->units ?? 0);
+    }
+
+
+
+
+public function scopeSupportUsers($q)
 {
-    $roles = self::roles();
-    return $roles[$this->role] ?? $this->role;
+    return $q->whereIn('role', [self::ROLE_SUPERADMIN, self::ROLE_CLIENT_SERVICE])
+             ->where('is_active', true);
 }
 
-
-public function replies() {
-    return $this->hasMany(Reply::class, 'sender_id');
-}
-
-public function getUnitsAttribute(): int
+public function canSeeAllConversations(): bool
 {
-    // Backwards compatibility for old views that call $user->units
-    return (int) ($this->company->units ?? 0);
+    return in_array($this->role, [self::ROLE_SUPERADMIN, self::ROLE_CLIENT_SERVICE], true);
 }
+
+public function isSupport(): bool
+{
+    return in_array($this->role, [self::ROLE_SUPERADMIN, self::ROLE_CLIENT_SERVICE], true);
+}
+
 }
