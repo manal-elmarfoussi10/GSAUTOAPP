@@ -46,7 +46,7 @@
                 name="q"
                 value="{{ request('q') }}"
                 autocomplete="off"
-                placeholder="Rechercher… (clients, devis, factures)"
+                placeholder="Rechercher… "
                 class="w-full h-7 pl-6 pr-7 rounded-md border border-gray-300/80
                        text-[12px] placeholder:text-gray-400 outline-none
                        focus:ring-1 focus:ring-[#FF4B00] focus:border-[#FF4B00]"
