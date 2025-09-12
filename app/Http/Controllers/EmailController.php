@@ -4,109 +4,133 @@ namespace App\Http\Controllers;
 
 use App\Models\Email;
 use App\Models\User;
-use Illuminate\Http\Request;
 use App\Models\Reply;
-use Illuminate\Support\Facades\Auth;      // ← Add this
-use Illuminate\Support\Facades\Storage; 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Company;
 
 class EmailController extends Controller
 {
     public function inbox()
     {
-        $emails = Email::with(['senderUser', 'receiverUser', 'replies.senderUser'])
-            ->where('receiver_id', Auth::id())
-            ->orWhereHas('replies', function ($query) {
-                $query->where('receiver_id', Auth::id());
+        $userId = Auth::id();
+
+        $emails = Email::with(['senderUser', 'receiverUser', 'replies.sender'])
+            ->where(function ($q) use ($userId) {
+                $q->where('receiver_id', $userId)
+                  ->orWhere('sender_id', $userId)
+                  ->orWhereHas('replies', fn($rq) => $rq->where('receiver_id', $userId)
+                                                        ->orWhere('sender_id', $userId));
             })
-            ->latest()
+            ->latest('created_at')
             ->paginate(10);
 
         return view('emails.inbox', compact('emails'));
     }
-    
+
     public function sent()
     {
         $emails = Email::with(['senderUser', 'receiverUser'])
             ->where('sender_id', Auth::id())
-            ->latest()
+            ->latest('created_at')
             ->paginate(10);
-    
+
         return view('emails.sent', compact('emails'));
     }
 
     public function important()
     {
-        $emails = Email::where('tag', 'important')
-            ->paginate(15); // Changed to paginate
-
+        $emails = Email::where('tag', 'important')->paginate(15);
         return view('emails.important', compact('emails'));
     }
 
     public function bin()
     {
-        $emails = Email::where('is_deleted', true)
-            ->paginate(15); // Changed to paginate
-
+        $emails = Email::where('is_deleted', true)->paginate(15);
         return view('emails.bin', compact('emails'));
     }
 
     public function create()
     {
-        // load only those roles you allow (admin, client service, etc.)
-        $users = User::where('company_id', auth()->user()->company_id)
-        ->get();
-    
-        return view('emails.create', compact('users'));
+        $me = auth()->user();
+
+        if ($me->canSeeAllConversations()) {
+            // Superadmin / Service client: see ALL companies + users
+            $companies = Company::query()
+                ->with(['users' => fn($q) => $q->where('is_active', true)->orderBy('name')])
+                ->orderBy('name')
+                ->get(['id','name']);
+
+            // GS Auto support users (no company)
+            $supportUsers = User::supportUsers()
+                ->whereNull('company_id')
+                ->orderBy('name')
+                ->get(['id','name','role']);
+        } else {
+            // Regular company user: only their company’s users
+            $companies = Company::query()
+                ->whereKey($me->company_id)
+                ->with(['users' => fn($q) => $q->where('is_active', true)->orderBy('name')])
+                ->get(['id','name']);
+
+            // Still allow GS Auto support as recipients
+            $supportUsers = User::supportUsers()
+                ->whereNull('company_id')
+                ->orderBy('name')
+                ->get(['id','name','role']);
+        }
+
+        return view('emails.create', [
+            'companies'    => $companies,
+            'supportUsers' => $supportUsers,
+        ]);
     }
 
- public function store(Request $request)
-{
-    $request->validate([
-        'receiver_id' => 'required|exists:users,id',
-        'subject'     => 'required|string',
-        'content'     => 'required|string',
-        'file'        => 'nullable|file|max:10240',
-    ]);
+    public function store(Request $request)
+    {
+        $request->validate([
+            'receiver_id' => 'required|exists:users,id',
+            'subject'     => 'required|string|max:255',
+            'content'     => 'required|string',
+            'file'        => 'nullable|file|max:10240',
+            'client_id'   => 'nullable|exists:clients,id',
+        ]);
 
-    $filePath = null;
-    $fileName = null;
+        $filePath = null;
+        $fileName = null;
 
-    if ($request->hasFile('file')) {
-        $filePath = $request->file('file')->store('attachments', 'public');
-        $fileName = $request->file('file')->getClientOriginalName();
+        if ($request->hasFile('file')) {
+            $filePath = $request->file('file')->store('attachments', 'public');
+            $fileName = $request->file('file')->getClientOriginalName();
+        }
+
+        Email::create([
+            'thread_id'   => null,                 // can be null for standalone email
+            'sender_id'   => Auth::id(),
+            'receiver_id' => $request->receiver_id,
+            'subject'     => $request->subject,
+            'content'     => $request->content,
+            'folder'      => 'sent',
+            'client_id'   => $request->input('client_id'),
+            'company_id'  => auth()->user()->company_id,
+            'file_path'   => $filePath,
+            'file_name'   => $fileName,
+        ]);
+
+        return redirect()->route('emails.sent')->with('success', 'Email envoyé.');
     }
 
-    Email::create([
-        'sender_id'   => Auth::id(),
-        'receiver_id' => $request->receiver_id,
-        'subject'     => $request->subject,
-        'content'     => $request->content,
-        'folder'      => 'sent',
-        'client_id'   => $request->input('client_id'),
-        'file_path'   => $filePath,
-        'file_name'   => $fileName,
-    ]);
-
-    return redirect()->route('emails.sent')->with('success', 'Email sent successfully.');
-}
     public function show($id)
     {
         $email = Email::with([
             'senderUser',
             'receiverUser',
-            'replies.senderUser'
+            'replies.sender',
+            'replies.receiver',
         ])->findOrFail($id);
 
-        if (!$email->is_read && $email->receiver_id == Auth::id()) {
-            $email->is_read = true;
-            $email->save();
-        }
-
-        foreach ($email->replies as $reply) {
-            if (!$reply->is_read && $reply->receiver_id == Auth::id()) {
-                $reply->is_read = true;
-                $reply->save();
-            }
+        if ($email->receiver_id == Auth::id()) {
+            $email->markAsRead(); // if is_read exists
         }
 
         return view('emails.show', compact('email'));
@@ -114,7 +138,7 @@ class EmailController extends Controller
 
     public function destroy(Email $email)
     {
-        $email->delete(); // or forceDelete() if using SoftDeletes
+        $email->delete();
         return redirect()->back()->with('success', 'Email supprimé définitivement.');
     }
 
@@ -125,14 +149,14 @@ class EmailController extends Controller
         $email->tag = null;
         $email->label_color = null;
         $email->save();
-    
-        return redirect()->route('emails.bin')->with('success', 'Email restored.');
+
+        return redirect()->route('emails.bin')->with('success', 'Email restauré.');
     }
 
     public function toggleStar($id)
     {
         $email = Email::findOrFail($id);
-        $email->update(['starred' => !$email->starred]);
+        $email->update(['starred' => ! (bool) $email->starred]);
 
         return back();
     }
@@ -142,14 +166,14 @@ class EmailController extends Controller
         $email = Email::findOrFail($id);
         $email->delete();
 
-        return back()->with('success', 'Email permanently deleted.');
+        return back()->with('success', 'Email définitivement supprimé.');
     }
 
     public function markImportant($id)
     {
         $email = Email::findOrFail($id);
         $email->tag = 'important';
-        $email->tag_color = '#facc15'; // yellow
+        $email->tag_color = '#facc15';
         $email->save();
 
         return redirect()->back()->with('success', 'Email marqué comme important.');
@@ -164,7 +188,7 @@ class EmailController extends Controller
             $email->tag_color = null;
         } else {
             $email->tag = 'important';
-            $email->tag_color = '#facc15'; // Yellow
+            $email->tag_color = '#facc15';
         }
 
         $email->save();
@@ -177,10 +201,10 @@ class EmailController extends Controller
         $email = Email::findOrFail($id);
         $email->is_deleted = true;
         $email->tag = 'bin';
-        $email->label_color = '#ef4444'; // red
+        $email->label_color = '#ef4444';
         $email->save();
 
-        return redirect()->back()->with('success', 'Email moved to trash.');
+        return redirect()->back()->with('success', 'Email déplacé vers la corbeille.');
     }
 
     public function reply(Request $request, $id)
@@ -189,21 +213,22 @@ class EmailController extends Controller
 
         $request->validate([
             'content' => 'required|string',
-            'file' => 'nullable|file|max:2048',
+            'file'    => 'nullable|file|max:2048',
         ]);
+
+        // Determine counterparty: reply goes to "the other side"
+        $receiverId = (Auth::id() == $email->receiver_id)
+            ? $email->sender_id
+            : $email->receiver_id;
 
         $reply = new Reply([
-            'email_id'   => $email->id,
-            'sender_id'  => Auth::id(),         // ← add this
-            'content'    => $request->content,
-            'file_path'  => null,
-            'file_name'  => null,
+            'email_id'    => $email->id,
+            'thread_id'   => $email->thread_id, // ✅ preserve thread linkage if any
+            'sender_id'   => Auth::id(),
+            'receiver_id' => $receiverId,
+            'content'     => $request->content,
         ]);
 
-        // Set receiver_id before saving
-        $reply->receiver_id = $email->receiver_id;
-
-        // Handle file upload if present
         if ($request->hasFile('file')) {
             $path = $request->file('file')->store('attachments', 'public');
             $reply->file_path = $path;
@@ -219,10 +244,10 @@ class EmailController extends Controller
     {
         $emails = Email::where('folder', 'inbox')
                    ->where('is_read', false)
-                   ->latest()
-                   ->paginate(12); // Paginate with 12 items per page
+                   ->latest('created_at')
+                   ->paginate(12);
 
-        $readCount = Email::where('folder', 'inbox')->where('is_read', true)->count();
+        $readCount   = Email::where('folder', 'inbox')->where('is_read', true)->count();
         $unreadCount = Email::where('folder', 'inbox')->where('is_read', false)->count();
 
         return view('emails.notifications', compact('emails', 'readCount', 'unreadCount'));
@@ -231,41 +256,27 @@ class EmailController extends Controller
     public function markAllRead()
     {
         Email::where('folder', 'inbox')->update(['is_read' => true]);
-
         return redirect()->back()->with('success', 'Toutes les notifications ont été marquées comme lues.');
     }
 
-    public function markAsRead(Email $email)
-{
-    $email->markAsRead();
-    return back();
-}
-
-
     public function upload(Request $request)
-{
-    if ($request->hasFile('upload')) {
-        $originName = $request->file('upload')->getClientOriginalName();
-        $fileName = pathinfo($originName, PATHINFO_FILENAME);
-        $extension = $request->file('upload')->getClientOriginalExtension();
-        $fileName = $fileName . '_' . time() . '.' . $extension;
+    {
+        if ($request->hasFile('upload')) {
+            $originName = $request->file('upload')->getClientOriginalName();
+            $fileName   = pathinfo($originName, PATHINFO_FILENAME) . '_' . time() . '.' . $request->file('upload')->getClientOriginalExtension();
 
-        $request->file('upload')->move(public_path('uploads'), $fileName);
+            $request->file('upload')->move(public_path('uploads'), $fileName);
 
-        $url = asset('uploads/' . $fileName);
+            return response()->json([
+                'uploaded' => 1,
+                'fileName' => $fileName,
+                'url'      => asset('uploads/' . $fileName),
+            ]);
+        }
 
         return response()->json([
-            'uploaded' => 1,
-            'fileName' => $fileName,
-            'url' => $url
-        ]);
+            'uploaded' => 0,
+            'error'    => ['message' => 'Upload failed.'],
+        ], 400);
     }
-
-    return response()->json([
-        'uploaded' => 0,
-        'error' => [
-            'message' => 'Upload failed.'
-        ]
-    ], 400);
-}
 }

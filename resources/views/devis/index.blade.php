@@ -50,7 +50,7 @@
                     </ul>
                 </div>
             </div>
-            
+
             <!-- Export Buttons -->
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('devis.export.excel') }}" class="flex items-center gap-2 border border-gray-200 px-4 py-2.5 rounded-lg text-sm bg-white text-gray-700 hover:bg-gray-50">
@@ -66,8 +66,8 @@
                     Export PDF
                 </a>
             </div>
-            
-           
+        </div>
+    </div>
 
     <!-- Devis Table -->
     <div class="bg-white shadow rounded-xl overflow-hidden border border-gray-100">
@@ -95,21 +95,33 @@
                                 #{{ $item->id }}
                             </a>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 col-date">{{ $item->date_devis }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 col-dossier">
-                            <div class="font-medium">{{ $item->client->nom_assure ?? '-' }}</div>
-                            <div class="text-xs text-gray-500 mt-1">{{ $item->client->reference ?? '' }}</div>
+
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 col-date">
+                            {{ $item->date_devis }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 col-ht">{{ number_format($item->total_ht, 2) }}€</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 col-ttc">{{ number_format($item->total_ttc, 2) }}€</td>
+
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 col-dossier">
+                            <div class="font-medium">{{ $item->display_client_name }}</div>
+                            <div class="text-xs text-gray-500 mt-1">{{ $item->client?->reference ?? '' }}</div>
+                        </td>
+
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 col-ht">
+                            {{ number_format($item->total_ht, 2) }}€
+                        </td>
+
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 col-ttc">
+                            {{ number_format($item->total_ttc, 2) }}€
+                        </td>
+
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 col-rdv">
                             <span class="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-xs">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
                                 </svg>
-                                {{ optional($item->client->rdvs->first())->start_time ?? '-' }}
+                                {{ $item->client?->rdvs?->first()?->start_time ?? '-' }}
                             </span>
                         </td>
+
                         <td class="px-6 py-4 whitespace-nowrap text-sm col-actions">
                             <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                                 <a href="{{ route('devis.edit', $item->id) }}" class="flex items-center gap-1 text-blue-600 hover:text-blue-800">
@@ -118,7 +130,7 @@
                                     </svg>
                                     Modifier
                                 </a>
-                                
+
                                 <form action="{{ route('devis.generate.facture', $item->id) }}" method="POST" onsubmit="return confirm('Confirmer l’émission de la facture ?')">
                                     @csrf
                                     <button type="submit" class="flex items-center gap-1 text-green-600 hover:text-green-800">
@@ -128,7 +140,7 @@
                                         Facturer
                                     </button>
                                 </form>
-                                
+
                                 <form action="{{ route('devis.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Confirmer la suppression ?')">
                                     @csrf
                                     @method('DELETE')
@@ -178,7 +190,6 @@
     document.addEventListener('click', function(e) {
         const columnMenu = document.getElementById('columnMenu');
         const button = document.querySelector('button[onclick="toggleColumnMenu()"]');
-        
         if (!columnMenu.contains(e.target) && !button.contains(e.target)) {
             columnMenu.classList.add('hidden');
         }
@@ -188,22 +199,17 @@
         toggle.addEventListener('change', function() {
             const columnClass = this.dataset.column;
             const isVisible = this.checked;
-            
             document.querySelectorAll(`.${columnClass}`).forEach(cell => {
                 cell.style.display = isVisible ? '' : 'none';
             });
-            
-            // Store preference in localStorage
             localStorage.setItem(columnClass, isVisible);
         });
     });
 
-    // Load column preferences
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.column-toggle').forEach(toggle => {
             const columnClass = toggle.dataset.column;
             const isVisible = localStorage.getItem(columnClass) !== 'false';
-            
             toggle.checked = isVisible;
             document.querySelectorAll(`.${columnClass}`).forEach(cell => {
                 cell.style.display = isVisible ? '' : 'none';

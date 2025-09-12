@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\CompanyScoped; 
 
 class Paiement extends Model
 {
-    protected $fillable = ['facture_id', 'montant', 'mode', 'commentaire', 'date', 'avoir_id'];
+    use CompanyScoped;
+    protected $fillable = ['facture_id', 'montant', 'mode', 'commentaire', 'date', 'avoir_id', 'company_id'];
 
     public function facture()
     {
@@ -17,5 +19,6 @@ class Paiement extends Model
 {
     return $this->belongsTo(Avoir::class);
 }
+public function company() { return $this->belongsTo(Company::class); }
 }
 

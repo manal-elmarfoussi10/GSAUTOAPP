@@ -1,11 +1,9 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\User;
-use App\Models\Email;
-use App\Models\Client;
 
 class ConversationThread extends Model
 {
@@ -23,7 +21,6 @@ class ConversationThread extends Model
         return $this->belongsTo(Client::class);
     }
 
-    // THIS is the creator relation your controller/view expects:
     public function creator()
     {
         return $this->belongsTo(User::class, 'creator_id');
@@ -31,13 +28,13 @@ class ConversationThread extends Model
 
     public function emails()
     {
+        // ✅ email FK is thread_id
         return $this->hasMany(Email::class, 'thread_id');
     }
 
     public function replies()
-{
-    return $this->hasMany(Reply::class, 'thread_id');
-}
-
- 
+    {
+        // ✅ reply FK is thread_id
+        return $this->hasMany(Reply::class, 'thread_id');
+    }
 }

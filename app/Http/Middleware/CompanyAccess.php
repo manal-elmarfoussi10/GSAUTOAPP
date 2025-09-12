@@ -2,31 +2,52 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
+use App\Models\Client;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class CompanyAccess
 {
-    /**
-     * Handle an incoming request.
-     */
     public function handle(Request $request, Closure $next): Response
     {
+        if (! auth()->check()) {
+            return redirect()->route('login');
+        }
+
         $user = auth()->user();
 
-        if (!$user) {
-            return redirect('/login')->with('error', 'Vous devez être connecté pour accéder à cette page.');
+        // Superadmin & Service client: full access
+        if (in_array($user->role, [User::ROLE_SUPERADMIN, User::ROLE_CLIENT_SERVICE], true)) {
+            return $next($request);
         }
 
-        if (!$user->company_id) {
-            return redirect('/')->with('error', 'Aucune entreprise associée à votre compte.');
+        // Others must belong to a company
+        if (! $user->company_id) {
+            abort(403, 'Aucune entreprise associée à votre compte.');
         }
 
-        // Optional: restrict certain roles
-        // if (!in_array($user->role, ['admin', 'client_support'])) {
-        //     return redirect('/')->with('error', 'Accès non autorisé.');
-        // }
+        // If route has {client}, enforce same company — but DON'T block when client.company_id is null
+        if ($clientParam = $request->route('client')) {
+            $client = $clientParam instanceof Client ? $clientParam : Client::find($clientParam);
+            if ($client) {
+                $clientCompanyId = $client->company_id;
+
+                // Only enforce when the client is actually linked to a company
+                if (!is_null($clientCompanyId) && (int)$clientCompanyId !== (int)$user->company_id) {
+                    abort(403, 'Accès refusé (client d’une autre entreprise).');
+                }
+            }
+        }
+
+        // If route has {company}, enforce match
+        if ($company = $request->route('company')) {
+            $companyId = is_object($company) ? $company->id : (int) $company;
+            if ((int)$companyId !== (int)$user->company_id) {
+                abort(403, 'Accès refusé (mauvaise entreprise).');
+            }
+        }
 
         return $next($request);
     }

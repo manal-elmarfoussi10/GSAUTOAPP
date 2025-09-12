@@ -10,9 +10,9 @@
                     <span class="bg-orange-500 text-white p-2 rounded-lg mr-3">
                         <i class="fas fa-user-edit"></i>
                     </span>
-                    Modifier le poseur: {{ $poseur->nom }}
+                    Modifier le Technicien: {{ $poseur->nom }}
                 </h1>
-                <p class="text-gray-600 mt-2">Mettez à jour les informations de ce poseur</p>
+                <p class="text-gray-600 mt-2">Mettez à jour les informations de ce technicien</p>
             </div>
             <a href="{{ route('poseurs.index') }}" class="flex items-center text-orange-600 hover:text-orange-800 font-medium">
                 <i class="fas fa-arrow-left mr-2"></i> Retour à la liste
@@ -93,8 +93,8 @@
                                     <input type="checkbox" name="actif" id="actif" value="1" class="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 rounded" {{ old('actif', $poseur->actif) ? 'checked' : '' }}>
                                 </div>
                                 <div class="ml-3 text-sm">
-                                    <label for="actif" class="font-medium text-gray-700">Poseur actif</label>
-                                    <p class="text-gray-500">Décochez pour désactiver ce poseur</p>
+                                    <label for="actif" class="font-medium text-gray-700">Technicien actif</label>
+                                    <p class="text-gray-500">Décochez pour désactiver ce technicien</p>
                                 </div>
                             </div>
                         </div>

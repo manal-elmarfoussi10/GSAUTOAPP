@@ -32,7 +32,7 @@
         <li>
             <a href="{{ route('bons-de-commande.index') }}"
                class="flex items-center gap-3 px-3 py-2 rounded {{ request()->routeIs('bons-de-commande.*') ? 'bg-[#FF4B00] text-white font-semibold' : 'hover:bg-orange-100 text-gray-700' }}">
-                <i data-lucide="package" class="w-4 h-4"></i> Bons de commandes
+                <i data-lucide="package" class="w-4 h-4"></i> Bon de livraison
             </a>
         </li>
         <li><a href="{{ route('fournisseurs.index') }}" class="flex items-center gap-3 px-3 py-2 rounded hover:bg-orange-100">

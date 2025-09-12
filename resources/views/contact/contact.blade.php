@@ -3,7 +3,7 @@
 @section('content')
 <div class="container mx-auto px-4 py-16">
     <h1 class="text-5xl font-extrabold text-center text-[#FF4B00] mb-16 tracking-tight">
-        Contactez-nous
+        Être recontacté
     </h1>
 
     <div class="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col lg:flex-row">

@@ -1,37 +1,52 @@
 <?php
+// app/Http/Controllers/ContactController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\Contact;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Auth;
 
 class ContactController extends Controller
 {
+    /**
+     * Show the contact form (tenant side).
+     */
     public function index()
     {
-        return view('contact.contact');
+        return view('contact.contact'); // was contact.index
     }
 
+    /**
+     * Handle submission and persist the contact message.
+     */
     public function send(Request $request)
     {
-        // Validation
+        // Basic validation
         $data = $request->validate([
-            'name'    => 'required|string|max:255',
-            'email'   => 'required|email',
-            'message' => 'required|string',
+            'name'    => ['required', 'string', 'max:255'],
+            'email'   => ['required', 'email', 'max:255'],
+            'message' => ['required', 'string', 'max:5000'],
         ]);
 
-        // Enregistrement en base
-        Contact::create($data);
+        // Attach company_id when the sender is authenticated (tenant user)
+        $data['company_id'] = Auth::check() ? (Auth::user()->company_id ?? null) : null;
 
-        // Envoi email
-        Mail::raw($data['message'], function ($message) use ($data) {
-            $message->to('votre_email@tonsite.com')  // <-- Remplace par ton adresse réelle
-                    ->subject("Message de {$data['name']}")
-                    ->replyTo($data['email']);
-        });
+        // Persist
+        $contact = Contact::create($data);
 
-        return redirect()->back()->with('success', 'Votre message a bien été envoyé. Merci !');
+        /**
+         * (Optional) Notify superadmins by email/notification
+         * Uncomment/replace with your preferred notification logic.
+         *
+         * use Illuminate\Support\Facades\Notification;
+         * use App\Notifications\NewContactMessage; // create if you want
+         *
+         * $superadmins = User::where('role', 'superadmin')->get();
+         * Notification::send($superadmins, new NewContactMessage($contact));
+         */
+
+        return back()->with('success', 'Message envoyé. Merci, nous revenons vers vous rapidement.');
     }
 }

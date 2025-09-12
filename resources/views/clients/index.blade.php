@@ -7,7 +7,7 @@
         <div class="bg-white rounded-2xl p-6 mb-6 shadow-md">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-800">Gestion des Clients</h1>
+                    <h1 class="text-2xl font-bold text-gray-800">Gestion dossiers</h1>
                     <p class="text-gray-600 mt-1">Gérez efficacement vos dossiers clients bris de glace</p>
                 </div>
                 

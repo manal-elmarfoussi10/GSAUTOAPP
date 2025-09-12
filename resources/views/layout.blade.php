@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>GG AUTO</title>
+    <title>GS AUTO</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     {{-- Favicons & manifest --}}
@@ -157,6 +157,7 @@
           </li>`).join('') || `<li class="px-3 py-2 text-sm text-gray-500">Aucun résultat…</li>`;
       }
 
+<<<<<<< HEAD
       const fetchSuggest = debounce(async (q)=>{
         if(!q || q.length<2){ hideBox(); return; }
         try{
@@ -167,6 +168,17 @@
           render(data); showBox();
         }catch(e){ hideBox(); }
       }, 250);
+=======
+    {{-- Unités (hide for superadmin) --}}
+    @if ($role !== 'superadmin')
+        @php $isUnit = request()->is('acheter-unites'); @endphp
+        <a href="{{ url('/acheter-unites') }}"
+           class="px-2 py-1 rounded transition duration-150 focus:outline-none focus:ring-2 focus:ring-[#FF4B00]
+                  {{ $isUnit ? 'bg-[#FF4B00] text-white' : 'text-[#FF4B00] hover:bg-[#FFA366] hover:text-white' }}">
+                  Crédit : <span class="font-bold">{{ auth()->user()->company?->units ?? 0 }}</span>
+        </a>
+    @endif
+>>>>>>> 23ad48476db50ef782c9217226aecca20163fa0b
 
       input.addEventListener('input', e=> fetchSuggest(e.target.value));
       input.addEventListener('focus', e=> fetchSuggest(e.target.value));
